@@ -1,12 +1,26 @@
-{
+﻿{
   "compilerOptions": {
-    "target": "es2016",
-    "module": "commonjs",
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "allowJs": true,
     "skipLibCheck": true,
-    "outDir": "dist"
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@backend/*": ["packages/backend/src/*"],
+      "@mobile/*": ["packages/mobile/src/*"]
+    }
   },
-  "include": ["src"]
+  "include": ["packages/*/src/**/*"],
+  "exclude": ["node_modules", "dist", "build"]
 }

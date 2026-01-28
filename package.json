@@ -1,14 +1,35 @@
 {
   "name": "app-lite-v2",
-  "version": "1.0.0",
-  "description": "",
-  "main": "dist/index.js",
+  "private": true,
+  "version": "2.0.0",
+  "description": "Versão 2.0 do App Lite com Swipe de Ofertas",
+  "author": "Infotech Development",
+  "license": "MIT",
   "scripts": {
-    "build": "tsc"
+    "start": "concurrently \"pnpm:start:backend\" \"pnpm:start:mobile\"",
+    "start:mobile": "pnpm run start --filter mobile",
+    "start:backend": "pnpm run dev --filter backend",
+    "android": "pnpm run android --filter mobile",
+    "ios": "pnpm run ios --filter mobile",
+    "build": "pnpm run build:backend && pnpm run build:mobile",
+    "build:mobile": "pnpm run build --filter mobile",
+    "build:backend": "pnpm run build --filter backend",
+    "test": "pnpm --parallel --stream test",
+    "test:mobile": "pnpm run test --filter mobile",
+    "test:backend": "pnpm run test --filter backend",
+    "lint": "pnpm --parallel --stream lint"
   },
-  "dependencies": {},
   "devDependencies": {
-    "typescript": "^5.5.3"
+    "@typescript-eslint/eslint-plugin": "^8.29.1",
+    "@typescript-eslint/parser": "^8.29.1",
+    "concurrently": "^8.2.2",
+    "eslint": "^9.24.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3"
   },
-  "private": true
+  "dependencies": {
+    "axios": "^1.9.0",
+    "dotenv": "^16.5.0"
+  },
+  "packageManager": "pnpm@10.9.0"
 }
