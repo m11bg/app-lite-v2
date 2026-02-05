@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { Text, Button, Snackbar, IconButton } from 'react-native-paper';
 import { Swiper, type SwiperCardRefType } from 'rn-swiper-list';
 import Icon from '@expo/vector-icons/MaterialCommunityIcons';
@@ -13,20 +13,14 @@ import OfferSwipeCard from '@/components/offers/OfferSwipeCard';
 import SwipeLikeOverlay from '@/components/offers/SwipeLikeOverlay';
 import SwipeNopeOverlay from '@/components/offers/SwipeNopeOverlay';
 import { useAuth } from '@/context/AuthContext';
-import { colors, spacing } from '@/styles/theme';
+import { colors, spacing, layout } from '@/styles/theme';
 
 // Tamanho de página padrão e margem para pré-carregar mais ofertas antes do fim do deck
 const PAGE_SIZE = 10;
 const PAGINATION_THRESHOLD = 3;
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 /**
  * Tela principal de exibição de ofertas no formato de "swipe" (cartões deslizáveis).
- * Permite ao usuário interagir com ofertas de serviços de forma dinâmica,
- * curtindo (swipe right) ou descartando (swipe left).
- * 
- * @returns {React.JSX.Element} Renderiza a interface de cartões deslizáveis ou estados de erro/carregamento.
  */
 const SwipeOfertasScreen: React.FC = () => {
     // Estados para o gerenciamento das ofertas e fluxo de dados
@@ -45,6 +39,9 @@ const SwipeOfertasScreen: React.FC = () => {
     const abortControllerRef = useRef<AbortController | null>(null);
     const { isAuthenticated } = useAuth();
     const navigation = useNavigation<NativeStackNavigationProp<OfertasStackParamList>>();
+    const { width: windowWidth } = useWindowDimensions();
+    const fallbackWidth = Math.max(layout.cardWidthFallback, layout.minScreenWidth);
+    const cardWidth = Math.max(windowWidth || fallbackWidth, layout.minScreenWidth) * layout.cardWidthRatio;
 
     // Configura as opções de navegação do cabeçalho com referência estável para evitar re-render desnecessário
     const headerRight = useCallback(
@@ -60,15 +57,16 @@ const SwipeOfertasScreen: React.FC = () => {
     );
 
     useEffect(() => {
-        navigation.setOptions({ headerRight });
-    }, [headerRight, navigation]);
+         navigation.setOptions({ headerRight });
+     }, [headerRight, navigation]);
 
-    /**
-     * Limpa o debounce da paginação para evitar múltiplas chamadas concorrentes.
-     * Garante que apenas um agendamento de nova página permaneça ativo.
-     *
-     * @returns {void} Não retorna valor; apenas limpa o timeout ativo, se existir.
-     */
+
+     /**
+      * Limpa o debounce da paginação para evitar múltiplas chamadas concorrentes.
+      * Garante que apenas um agendamento de nova página permaneça ativo.
+      *
+      * @returns {void} Não retorna valor; apenas limpa o timeout ativo, se existir.
+      */
     const clearPaginationDebounce = useCallback(() => {
         if (paginationDebounceRef.current) {
             clearTimeout(paginationDebounceRef.current);
@@ -95,10 +93,10 @@ const SwipeOfertasScreen: React.FC = () => {
     const loadOfertas = useCallback(
         async (pageNum = 1, append = false, origin: 'initial' | 'paginate' | 'refresh' = 'initial') => {
             lastRequestRef.current = { page: pageNum, append, origin };
-             const requestId = ++requestIdRef.current;
-             abortControllerRef.current?.abort();
-             const controller = new AbortController();
-             abortControllerRef.current = controller;
+            const requestId = ++requestIdRef.current;
+            abortControllerRef.current?.abort();
+            const controller = new AbortController();
+            abortControllerRef.current = controller;
 
             setError(null);
             if (origin === 'initial') setIsInitialLoading(true);
@@ -106,20 +104,18 @@ const SwipeOfertasScreen: React.FC = () => {
             if (origin === 'refresh') setIsRefreshing(true);
 
             try {
-                // Chamada ao serviço de ofertas buscando 10 itens por vez
                 const response = await ofertaService.getOfertas({}, pageNum, PAGE_SIZE, controller.signal);
                 if (requestId !== requestIdRef.current) return;
 
                 const newOfertas = response.ofertas || [];
                 const totalPages = response.totalPages || Math.max(1, Math.ceil((response.total ?? 0) / PAGE_SIZE));
                 const currentPage = response.page || pageNum;
-                // Atualiza o estado de paginação baseado na resposta do servidor com fallback por total
-                setHasMore(currentPage < totalPages);
+                const noMorePages = currentPage >= totalPages;
+
+                setHasMore(!noMorePages);
                 setPage(currentPage);
-                // Adiciona novos itens ao final da lista existente (infite scroll)
                 setOfertas((prev) => (append ? [...prev, ...newOfertas] : newOfertas));
-                // Define estado vazio apenas se for o carregamento inicial e não houver dados
-                setIsEmpty(!append && newOfertas.length === 0);
+                setIsEmpty(!append ? newOfertas.length === 0 : newOfertas.length === 0 && noMorePages);
             } catch (err: any) {
                 if (controller.signal.aborted) return;
                 const message = err?.message
@@ -131,6 +127,9 @@ const SwipeOfertasScreen: React.FC = () => {
                     setIsInitialLoading(false);
                     setIsPaging(false);
                     setIsRefreshing(false);
+                }
+                if (abortControllerRef.current === controller) {
+                    abortControllerRef.current = null;
                 }
             }
         },
@@ -157,13 +156,11 @@ const SwipeOfertasScreen: React.FC = () => {
         if (!hasMore || isPaging) return;
         clearPaginationDebounce();
         paginationDebounceRef.current = setTimeout(() => {
-            setPage((prev) => {
-                const next = prev + 1;
-                void loadOfertas(next, true, 'paginate');
-                return next;
-            });
-        }, 300); // debounce curto para evitar chamadas duplicadas em sequência
-    }, [clearPaginationDebounce, hasMore, isPaging, loadOfertas]);
+            if (!hasMore || isPaging) return;
+            const nextPage = page + 1;
+            void loadOfertas(nextPage, true, 'paginate');
+        }, 300);
+    }, [clearPaginationDebounce, hasMore, isPaging, loadOfertas, page]);
 
     /**
      * Manipula o swipe para a direita (Like), registra a interação e pré-carrega mais cartas ao se aproximar do fim.
@@ -178,7 +175,9 @@ const SwipeOfertasScreen: React.FC = () => {
 
             // Se o usuário estiver autenticado, registra o Like; caso contrário, apenas passa o cartão
             if (isAuthenticated) {
-                void interactionService.likeOffer(oferta._id).catch(console.error);
+                void interactionService.likeOffer(oferta._id).catch((err) => {
+                    if (__DEV__) console.error(err);
+                });
             }
 
             // Se o usuário estiver chegando ao fim da lista atual, carrega a próxima página
@@ -202,7 +201,9 @@ const SwipeOfertasScreen: React.FC = () => {
 
             // Se o usuário estiver autenticado, registra o Dislike; caso contrário, apenas passa o cartão
             if (isAuthenticated) {
-                void interactionService.dislikeOffer(oferta._id).catch(console.error);
+                void interactionService.dislikeOffer(oferta._id).catch((err) => {
+                    if (__DEV__) console.error(err);
+                });
             }
 
             // Lógica de paginação antecipada (carrega mais antes de acabar todos os cartões)
@@ -232,9 +233,16 @@ const SwipeOfertasScreen: React.FC = () => {
      * @returns {void} Não retorna valor; apenas chama a API do swiper.
      */
     const handleUndo = useCallback(() => {
-        if (!swiperRef.current || ofertas.length === 0) return;
-        swiperRef.current.swipeBack();
-    }, []);
+        const swiper = swiperRef.current;
+        if (!swiper || ofertas.length === 0) return;
+        try {
+            const currentIndex = (swiper as any).currentIndex;
+            if (typeof currentIndex === 'number' && currentIndex <= 0) return;
+            swiper.swipeBack();
+        } catch (err) {
+            if (__DEV__) console.error(err);
+        }
+    }, [ofertas.length]);
 
     /**
      * Recarrega as ofertas do zero (pull-to-refresh) limpando estados de paginação e vazio.
@@ -318,7 +326,7 @@ const SwipeOfertasScreen: React.FC = () => {
                     onSwipeRight={handleSwipeRight}
                     onSwipeLeft={handleSwipeLeft}
                     onSwipedAll={handleSwipedAll}
-                    cardStyle={styles.cardContainer}
+                    cardStyle={[styles.cardContainer, { width: cardWidth }]}
                 />
             </View>
 
@@ -418,7 +426,6 @@ const styles = StyleSheet.create({
         marginTop: spacing.lg,
     },
     cardContainer: {
-        width: SCREEN_WIDTH * 0.9,
         alignSelf: 'center',
         // Removido marginBottom e relying na centralização do swiperArea
     },

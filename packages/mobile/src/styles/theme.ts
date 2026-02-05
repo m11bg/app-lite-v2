@@ -108,6 +108,12 @@ export const spacing = {
     xxl: 48,
 };
 
+export const layout = {
+    cardWidthFallback: 375,
+    cardWidthRatio: 0.9,
+    minScreenWidth: 320,
+};
+
 // Design tokens: radius
 export const radius = {
     xs: 2,

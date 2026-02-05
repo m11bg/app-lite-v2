@@ -32,9 +32,9 @@ if (typeof globalThis.expo.SharedRef === 'undefined') {
 // Garantir que StyleSheet.flatten exista antes dos testes (necessário para RNTL formatters)
 try {
     const RN = require('react-native');
-    if (RN && RN.StyleSheet && typeof RN.StyleSheet.flatten !== 'function') {
+    if (RN && RN.StyleSheet) {
         Object.defineProperty(RN.StyleSheet, 'flatten', {
-            value: (s) => s,
+            value: (s) => (Array.isArray(s) ? Object.assign({}, ...s) : s),
             writable: true,
             configurable: true,
         });

@@ -1,6 +1,12 @@
 /// <reference types="jest" />
 // Jest setup for Super App Mobile (Expo SDK 53)
 
+// Hack global para evitar erros de NativeModules no ambiente Node do Jest
+// @ts-ignore
+global.__fbBatchedBridgeConfig = { remoteModuleConfig: [] };
+// @ts-ignore
+global.__turboModuleProxy = jest.fn();
+
 // Definir variáveis globais do React Native para o ambiente de teste
 global.__DEV__ = true;
 global.__TEST__ = true;
@@ -80,6 +86,55 @@ try {
 if (typeof (globalThis as any).requestAnimationFrame !== 'function') {
     ;(globalThis as any).requestAnimationFrame = (cb: any) => setTimeout(cb, 0);
 }
+
+// Mock TurboModuleRegistry to avoid SourceCode/DeviceInfo errors
+jest.mock('react-native/Libraries/TurboModule/TurboModuleRegistry', () => ({
+    get: jest.fn(),
+    getEnforcing: jest.fn((name) => {
+        if (name === 'DeviceInfo') {
+            return {
+                getConstants: () => ({
+                    Dimensions: {
+                        window: { width: 375, height: 812, scale: 2, fontScale: 1 },
+                        screen: { width: 375, height: 812, scale: 2, fontScale: 1 },
+                    },
+                }),
+            };
+        }
+        return {};
+    }),
+}));
+
+// Mock Platform to avoid OS property access errors
+jest.mock('react-native/Libraries/Utilities/Platform', () => ({
+    OS: 'ios',
+    select: (obj: any) => obj.ios || obj.default,
+    Version: 1,
+    isTesting: true,
+}));
+
+// Mock NativeModules
+jest.mock('react-native/Libraries/BatchedBridge/NativeModules', () => ({
+    DeviceInfo: {
+        getConstants: () => ({
+            Dimensions: {
+                window: { width: 375, height: 812, scale: 2, fontScale: 1 },
+                screen: { width: 375, height: 812, scale: 2, fontScale: 1 },
+            },
+        }),
+    },
+    UIManager: {
+        getViewManagerConfig: () => ({}),
+    },
+}));
+
+// Garantir que StyleSheet.flatten exista (necessário para RNTL)
+try {
+    const RN = require('react-native');
+    if (RN.StyleSheet && typeof RN.StyleSheet.flatten !== 'function') {
+        RN.StyleSheet.flatten = (s: any) => (Array.isArray(s) ? Object.assign({}, ...s) : s);
+    }
+} catch (e) {}
 
 // Mock @expo/vector-icons para evitar erros de importação nos testes
 jest.mock('@expo/vector-icons', () => ({
