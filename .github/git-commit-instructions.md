@@ -1,0 +1,2 @@
+Siga o padrão Conventional Commits. A mensagem deve ter um tipo, um escopo opcional e um resumo. Ex: `feat(auth): implementar login com e-mail e senha`
+Tipos permitidos: feat, fix, docs, style, refactor, test, chore.

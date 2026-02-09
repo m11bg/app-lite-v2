@@ -1,0 +1,11 @@
+# Dependências e arquivos de build
+node_modules/
+dist/
+build/
+.expo/
+
+# Arquivos de ambiente
+.env*
+
+# Logs
+*.log

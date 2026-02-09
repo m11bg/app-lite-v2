@@ -1,37 +1,65 @@
-import React, { memo } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
-import { Card, Text, Chip, Avatar } from 'react-native-paper';
+import React, { memo, useCallback, useMemo, useState } from 'react';
+import { View, StyleSheet, useWindowDimensions, Platform } from 'react-native';
+import { Card, Text, Avatar } from 'react-native-paper';
 import { Image } from 'expo-image';
 import { OfertaServico } from '@/types/oferta';
-import { colors, spacing, radius } from '@/styles/theme';
+import { colors, spacing, radius, layout } from '@/styles/theme';
 
-/**
- * Obtém as dimensões da janela do dispositivo para cálculo proporcional do tamanho do cartão.
- */
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-/**
- * Define a largura do cartão como 90% da largura total da tela para garantir margens laterais.
- */
-const CARD_WIDTH = SCREEN_WIDTH * 0.9;
-
-/**
- * Define a altura do cartão como 70% da altura total da tela para melhor preenchimento visual.
- */
-const CARD_HEIGHT = SCREEN_HEIGHT * 0.68;
-
-/**
- * Interface que define as propriedades aceitas pelo componente OfferSwipeCard.
- * 
- * @interface OfferSwipeCardProps
- */
 interface OfferSwipeCardProps {
-    /** 
-     * Objeto contendo todos os dados da oferta de serviço. 
-     * Deve seguir a estrutura definida pelo tipo OfertaServico.
-     */
     item: OfertaServico;
+    onPress?: (item: OfertaServico) => void;
+    accessibilityHint?: string;
 }
+
+type OfferCardI18n = {
+    fallbacks: {
+        title: string;
+        description: string;
+        city: string;
+        provider: string;
+        priceUnit: string;
+        imageText: string;
+    };
+    accessibility: {
+        hint: string;
+        categoryPrefix: string;
+        titlePrefix: string;
+        descriptionPrefix: string;
+        pricePrefix: string;
+        imagePrefix: string;
+        providerPrefix: string;
+    };
+};
+
+const offerCardStrings: OfferCardI18n = {
+    fallbacks: {
+        title: 'Serviço não informado',
+        description: 'Descrição não informada',
+        city: 'Cidade não informada',
+        provider: 'Prestador',
+        priceUnit: 'unidade',
+        imageText: 'Oferta',
+    },
+    accessibility: {
+        hint: 'Abre os detalhes da oferta',
+        categoryPrefix: 'Categoria',
+        titlePrefix: 'Título',
+        descriptionPrefix: 'Descrição',
+        pricePrefix: 'Preço',
+        imagePrefix: 'Imagem da oferta',
+        providerPrefix: 'Prestador',
+    },
+};
+
+const FALLBACK_IMAGE = 'https://via.placeholder.com/800x600?text=Oferta';
+const PLACEHOLDER_BLURHASH = 'L5H2EC=PM+yV0g-mq.wG9c010J}I';
+
+const priceFormatter = new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+});
+
+const useOfferCardI18n = () => useMemo(() => offerCardStrings, []);
 
 /**
  * Componente que renderiza um cartão individual para a funcionalidade de "Swipe" (deslizar) de ofertas.
@@ -43,75 +71,153 @@ interface OfferSwipeCardProps {
  * @param {OfertaServico} props.item - Os dados da oferta que serão exibidos no cartão.
  * @returns {React.ReactElement} O elemento JSX que compõe o cartão de oferta.
  */
-const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item }) => {
-    /**
-     * Define a imagem principal a ser exibida. 
-     * Utiliza a primeira imagem do array de imagens ou uma URL de placeholder caso não haja imagens.
-     */
-    const mainImage = item.imagens?.[0] || 'https://via.placeholder.com/400x300';
-    
-    /**
-     * Formata o valor numérico da oferta para uma string de moeda no padrão Brasileiro (R$).
-     */
-    const formattedPrice = new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-    }).format(item.preco);
+const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, onPress, accessibilityHint }) => {
+    const { width: windowWidth } = useWindowDimensions();
+    const [imageErrored, setImageErrored] = useState(false);
+    const strings = useOfferCardI18n();
+
+    const cardWidth = useMemo(() => {
+        const safeWidth = Number.isFinite(windowWidth) && windowWidth > 0 ? windowWidth : (layout?.cardWidthFallback ?? 375);
+        const clamped = Math.max(layout?.minScreenWidth ?? 320, safeWidth);
+        return clamped * (layout?.cardWidthRatio ?? 0.9);
+    }, [windowWidth]);
+
+    const mainImageUri = item?.imagens?.[0];
+
+    const resolvedImageSource = useMemo(() => {
+        return imageErrored || !mainImageUri ? { uri: FALLBACK_IMAGE } : { uri: mainImageUri };
+    }, [imageErrored, mainImageUri]);
+
+    const precoNumber = typeof item?.preco === 'number' ? item.preco : Number(item?.preco ?? 0);
+    const safePrice = Number.isFinite(precoNumber) && precoNumber >= 0 ? precoNumber : 0;
+
+    const formattedPrice = useMemo(() => priceFormatter.format(safePrice), [safePrice]);
+
+    const categoria = useMemo(() => (item?.categoria?.trim() || strings.fallbacks.imageText).toUpperCase(), [item?.categoria, strings.fallbacks.imageText]);
+    const titulo = item?.titulo?.trim() || strings.fallbacks.title;
+    const descricao = item?.descricao?.trim() || strings.fallbacks.description;
+    const unidadePreco = item?.unidadePreco?.trim() || strings.fallbacks.priceUnit;
+    const prestadorNome = item?.prestador?.nome?.trim() || strings.fallbacks.provider;
+    const cidade = item?.localizacao?.cidade?.trim() || strings.fallbacks.city;
+    const avatarUri = item?.prestador?.avatar;
+
+    const accessibilityCardLabel = useMemo(() => `Oferta: ${titulo} em ${cidade}`, [titulo, cidade]);
+    const accessibilityImageLabel = useMemo(
+        () => `${strings.accessibility.imagePrefix} ${titulo}`,
+        [strings.accessibility.imagePrefix, titulo],
+    );
+    const accessibilityPrestadorLabel = useMemo(
+        () => `${strings.accessibility.providerPrefix} ${prestadorNome} de ${cidade}`,
+        [strings.accessibility.providerPrefix, prestadorNome, cidade],
+    );
+    const accessibilityPriceLabel = useMemo(
+        () => `${strings.accessibility.pricePrefix} ${formattedPrice} por ${unidadePreco}`,
+        [formattedPrice, strings.accessibility.pricePrefix, unidadePreco],
+    );
+
+    const handleImageError = useCallback(() => setImageErrored(true), []);
+    const handlePress = useCallback(() => {
+        if (onPress) onPress(item);
+    }, [item, onPress]);
 
     return (
-        <Card style={styles.card} mode="elevated">
-            {/* Container da imagem com altura fixa para evitar deslocamentos */}
-            <View style={styles.imageContainer}>
+        <Card
+            style={[styles.card, { width: cardWidth }]}
+            mode="elevated"
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={accessibilityCardLabel}
+            accessibilityHint={accessibilityHint || strings.accessibility.hint}
+            accessibilityState={{ disabled: !onPress, error: imageErrored }}
+            onPress={onPress ? handlePress : undefined}
+            testID="offer-swipe-card"
+        >
+            <View style={styles.imageContainer} accessibilityRole="image" accessibilityLabel={accessibilityImageLabel}>
                 <Image
-                    source={{ uri: mainImage }}
+                    source={resolvedImageSource}
                     style={styles.image}
                     contentFit="cover"
                     transition={300}
+                    accessibilityLabel={accessibilityImageLabel}
+                    accessibilityIgnoresInvertColors={false}
+                    placeholder={PLACEHOLDER_BLURHASH}
+                    onError={handleImageError}
                 />
             </View>
 
-            {/* Container de conteúdo ocupando o restante do cartão */}
             <View style={styles.contentContainer}>
-                {/* Cabeçalho: Categoria e Título */}
                 <View style={styles.headerSection}>
-                    <Text variant="labelSmall" style={styles.categoryLabel}>
-                        {item.categoria.toUpperCase()}
+                    <Text
+                        variant="labelSmall"
+                        style={styles.categoryLabel}
+                        accessibilityLabel={`${strings.accessibility.categoryPrefix} ${categoria}`}
+                        accessibilityRole="text"
+                    >
+                        {categoria}
                     </Text>
-                    <Text variant="titleLarge" style={styles.title} numberOfLines={2}>
-                        {item.titulo}
+                    <Text
+                        variant="titleLarge"
+                        style={styles.title}
+                        numberOfLines={2}
+                        ellipsizeMode="tail"
+                        accessibilityLabel={`${strings.accessibility.titlePrefix} ${titulo}`}
+                        accessibilityRole="text"
+                    >
+                        {titulo}
                     </Text>
                 </View>
 
-                {/* Descrição com altura flexível centralizada */}
                 <View style={styles.descriptionSection}>
-                    <Text variant="bodyMedium" style={styles.description} numberOfLines={3}>
-                        {item.descricao}
+                    <Text
+                        variant="bodyMedium"
+                        style={styles.description}
+                        numberOfLines={3}
+                        ellipsizeMode="tail"
+                        accessibilityLabel={`${strings.accessibility.descriptionPrefix} ${descricao}`}
+                        accessibilityRole="text"
+                    >
+                        {descricao}
                     </Text>
                 </View>
 
-                {/* Rodapé: Info do prestador e Preço */}
                 <View style={styles.footerSection}>
-                    <View style={styles.prestadorInfo}>
-                        <Avatar.Image
-                            size={36}
-                            source={{ uri: item.prestador.avatar || 'https://via.placeholder.com/40' }}
-                        />
+                    <View
+                        style={styles.prestadorInfo}
+                        accessible
+                        accessibilityLabel={accessibilityPrestadorLabel}
+                        accessibilityRole="text"
+                    >
+                        {avatarUri ? (
+                            <Avatar.Image
+                                size={36}
+                                source={{ uri: avatarUri }}
+                                accessibilityRole="image"
+                                accessibilityIgnoresInvertColors
+                            />
+                        ) : (
+                            <Avatar.Text
+                                size={36}
+                                label={prestadorNome ? prestadorNome.charAt(0).toUpperCase() : '?'}
+                                accessibilityRole="image"
+                                accessibilityIgnoresInvertColors
+                            />
+                        )}
                         <View style={styles.prestadorText}>
-                            <Text variant="labelMedium" style={styles.prestadorNome}>
-                                {item.prestador.nome}
+                            <Text variant="labelMedium" style={styles.prestadorNome} numberOfLines={1} ellipsizeMode="tail">
+                                {prestadorNome}
                             </Text>
-                            <Text variant="bodySmall" style={styles.location}>
-                                {item.localizacao.cidade}
+                            <Text variant="bodySmall" style={styles.location} numberOfLines={1} ellipsizeMode="tail">
+                                {cidade}
                             </Text>
                         </View>
                     </View>
 
-                    <View style={styles.priceContainer}>
-                        <Text variant="titleLarge" style={styles.price}>
+                    <View style={styles.priceContainer} accessibilityLabel={accessibilityPriceLabel} accessibilityRole="text">
+                        <Text variant="titleLarge" style={styles.price} numberOfLines={1} ellipsizeMode="tail">
                             {formattedPrice}
                         </Text>
-                        <Text variant="labelSmall" style={styles.priceUnit}>
-                            /{item.unidadePreco}
+                        <Text variant="labelSmall" style={styles.priceUnit} numberOfLines={1} ellipsizeMode="tail">
+                            /{unidadePreco}
                         </Text>
                     </View>
                 </View>
@@ -122,21 +228,32 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item }) => {
 
 const styles = StyleSheet.create({
     card: {
-        width: CARD_WIDTH,
-        height: CARD_HEIGHT,
         borderRadius: radius.xl,
         overflow: 'hidden',
         backgroundColor: colors.surface,
-        elevation: 6,
-        // Sombra para iOS
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
+            },
+            android: {
+                elevation: 6,
+            },
+            default: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
+            },
+        }),
+        alignSelf: 'center',
+        maxWidth: 600,
     },
     imageContainer: {
         width: '100%',
-        height: '50%', // Ajustado para 50% para dar mais equilíbrio
+        aspectRatio: 16 / 10,
         backgroundColor: colors.backdrop,
     },
     image: {
@@ -147,6 +264,7 @@ const styles = StyleSheet.create({
         flex: 1,
         padding: spacing.md,
         justifyContent: 'space-between',
+        gap: spacing.sm,
     },
     headerSection: {
         marginBottom: spacing.xs,
@@ -178,13 +296,16 @@ const styles = StyleSheet.create({
         paddingTop: spacing.sm,
         borderTopWidth: 0.5,
         borderTopColor: colors.border,
+        gap: spacing.md,
     },
     prestadorInfo: {
         flexDirection: 'row',
         alignItems: 'center',
+        flexShrink: 1,
     },
     prestadorText: {
         marginLeft: spacing.sm,
+        flexShrink: 1,
     },
     prestadorNome: {
         color: colors.onSurface,
@@ -196,6 +317,8 @@ const styles = StyleSheet.create({
     },
     priceContainer: {
         alignItems: 'flex-end',
+        flexShrink: 0,
+        minWidth: 80,
     },
     price: {
         color: colors.primary,
@@ -207,8 +330,34 @@ const styles = StyleSheet.create({
     },
 });
 
+const areEqual = (prev: OfferSwipeCardProps, next: OfferSwipeCardProps) => {
+    // Validação básica de existência do item
+    if (!prev.item || !next.item) return prev.item === next.item;
+
+    const prevId = prev.item._id;
+    const nextId = next.item._id;
+
+    // Se os IDs são diferentes, os itens são diferentes
+    if (prevId !== nextId) return false;
+
+    // Se os IDs são iguais, verificamos mudanças profundas em campos críticos de UI
+    return (
+        prev.item.preco === next.item.preco &&
+        prev.item.unidadePreco === next.item.unidadePreco &&
+        prev.item.titulo === next.item.titulo &&
+        prev.item.descricao === next.item.descricao &&
+        prev.item.categoria === next.item.categoria &&
+        prev.item.imagens?.[0] === next.item.imagens?.[0] &&
+        prev.item.prestador?.nome === next.item.prestador?.nome &&
+        prev.item.prestador?.avatar === next.item.prestador?.avatar &&
+        prev.item.localizacao?.cidade === next.item.localizacao?.cidade &&
+        prev.accessibilityHint === next.accessibilityHint &&
+        prev.onPress === next.onPress
+    );
+};
+
 /**
  * Exportação otimizada do componente utilizando React.memo para evitar re-renderizações desnecessárias
  * enquanto o usuário navega entre os cartões de oferta.
  */
-export default memo(OfferSwipeCard);
+export default memo(OfferSwipeCard, areEqual);

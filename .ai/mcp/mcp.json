@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx.cmd",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ]
+    },
+    "mongodb": {
+      "command": "npx.cmd",
+      "args": [
+        "-y",
+        "mongodb-mcp-server@latest",
+        "--readOnly"
+      ],
+      "env": {
+        "MDB_MCP_CONNECTION_STRING": "mongodb://localhost:27017/app-lite-clean"
+      }
+    },
+    "expo": {
+      "command": "npx.cmd",
+      "args": [
+        "-y",
+        "expo-mcp",
+        "--dev-server-url",
+        "http://localhost:8081"
+      ],
+      "env": {
+        "EXPO_TOKEN": "DfTWvEMnn4mY4g9TwQ95mxY3sw8nGGNFcojDNOKQ"
+      }
+    }
+  }
+}
