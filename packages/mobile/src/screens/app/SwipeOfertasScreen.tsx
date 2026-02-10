@@ -39,7 +39,7 @@ const SwipeOfertasScreen: React.FC = () => {
     const paginationDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const requestIdRef = useRef(0);
     const abortControllerRef = useRef<AbortController | null>(null);
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
     const navigation = useNavigation<NativeStackNavigationProp<OfertasStackParamList>>();
     const { width: windowWidth } = useWindowDimensions();
     const insets = useSafeAreaInsets();
@@ -107,7 +107,14 @@ const SwipeOfertasScreen: React.FC = () => {
             if (origin === 'refresh') setIsRefreshing(true);
 
             try {
-                const response = await ofertaService.getOfertas({}, pageNum, PAGE_SIZE, controller.signal);
+                // Prepara os filtros incluindo o userId se autenticado para evitar ofertas repetidas
+                const filters: OfertaFilters = {};
+                const currentUserId = user?.id || (user as any)?._id;
+                if (isAuthenticated && currentUserId) {
+                    filters.userId = currentUserId;
+                }
+
+                const response = await ofertaService.getOfertas(filters, pageNum, PAGE_SIZE, controller.signal);
                 if (requestId !== requestIdRef.current) return;
 
                 const newOfertas = response.ofertas || [];
@@ -118,6 +125,7 @@ const SwipeOfertasScreen: React.FC = () => {
                 setHasMore(!noMorePages);
                 setPage(currentPage);
                 setOfertas((prev) => (append ? [...prev, ...newOfertas] : newOfertas));
+                if (!append) setCurrentIndex(0);
                 setIsEmpty(!append ? newOfertas.length === 0 : newOfertas.length === 0 && noMorePages);
             } catch (err: any) {
                 if (controller.signal.aborted) return;
@@ -136,7 +144,7 @@ const SwipeOfertasScreen: React.FC = () => {
                 }
             }
         },
-        []
+        [isAuthenticated, user]
     );
 
     // Efeito para carregar as ofertas iniciais quando o componente é montado
@@ -495,3 +503,5 @@ const styles = StyleSheet.create({
 });
 
 export default SwipeOfertasScreen;
+
+

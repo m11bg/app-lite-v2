@@ -59,4 +59,6 @@ export interface OfertaFilters {
     // Coordenadas para sort por distância
     lat?: number;
     lng?: number;
+    // ID do usuário para filtrar ofertas já interagidas (Swipe)
+    userId?: string;
 }

@@ -69,7 +69,8 @@ export const ofertaController = {
                 // Coordenadas opcionais para sort=distancia
                 lat: q.lat ? Number(q.lat) : undefined,
                 lng: q.lng ? Number(q.lng) : undefined,
-                userId: req.user?.id,
+                // Prioriza o ID do usuário vindo da autenticação (mais seguro), mas aceita da query
+                userId: req.user?.id || (q as any).userId,
             };
             // --- FIM DA CORREÇÃO 2 ---
 

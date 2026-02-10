@@ -34,6 +34,8 @@ export const ofertaFiltersSchema = z.object({
         // Coordenadas para ordenação por distância
         lat: z.coerce.number().min(-90, 'Latitude inválida').max(90, 'Latitude inválida').optional(),
         lng: z.coerce.number().min(-180, 'Longitude inválida').max(180, 'Longitude inválida').optional(),
+        // ID do usuário opcional para filtrar ofertas já interagidas
+        userId: z.string().optional(),
     }).superRefine((q, ctx) => {
         // Validação: precoMin não pode ser maior que precoMax
         if (typeof q.precoMin === 'number' && typeof q.precoMax === 'number' && q.precoMin > q.precoMax) {

@@ -137,6 +137,7 @@ export const ofertaService = {
         if (filters?.sort) params.sort = filters.sort;
         if (filters?.comMidia === true) params.comMidia = 'true';
         if (filters?.tipoPessoa) params.tipoPessoa = filters.tipoPessoa;
+        if (filters?.userId) params.userId = filters.userId;
         if (filters?.sort === 'distancia') {
             if (typeof filters?.lat === 'number') params.lat = filters.lat;
             if (typeof filters?.lng === 'number') params.lng = filters.lng;
