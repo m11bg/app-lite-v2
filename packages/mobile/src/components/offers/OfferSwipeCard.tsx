@@ -1,15 +1,20 @@
-import React, { memo, useCallback, useMemo, useState } from 'react';
-import { View, StyleSheet, useWindowDimensions, Platform } from 'react-native';
+import React, { memo, useCallback, useMemo, useState, useEffect } from 'react';
+import { View, StyleSheet, useWindowDimensions, Platform, Pressable, LayoutChangeEvent, GestureResponderEvent } from 'react-native';
 import { Card, Text, Avatar } from 'react-native-paper';
 import { Image } from 'expo-image';
+import { VideoView, useVideoPlayer } from 'expo-video';
+import MediaProgressIndicator from '@/components/offers/MediaProgressIndicator';
+import { toAbsoluteMediaUrls } from '@/utils/mediaUrl';
 import { OfertaServico } from '@/types/oferta';
 import { colors, spacing, radius, layout } from '@/styles/theme';
 
 interface OfferSwipeCardProps {
     item: OfertaServico;
-    onPress?: (item: OfertaServico) => void;
+    isActiveCard: boolean;
     accessibilityHint?: string;
 }
+
+type MediaItem = { type: 'image' | 'video'; url: string };
 
 type OfferCardI18n = {
     fallbacks: {
@@ -71,10 +76,23 @@ const useOfferCardI18n = () => useMemo(() => offerCardStrings, []);
  * @param {OfertaServico} props.item - Os dados da oferta que serão exibidos no cartão.
  * @returns {React.ReactElement} O elemento JSX que compõe o cartão de oferta.
  */
-const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, onPress, accessibilityHint }) => {
+const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, accessibilityHint }) => {
     const { width: windowWidth } = useWindowDimensions();
     const [imageErrored, setImageErrored] = useState(false);
+    const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+    const [mediaWidth, setMediaWidth] = useState(0);
     const strings = useOfferCardI18n();
+
+    const imageUrls = useMemo(() => toAbsoluteMediaUrls(item?.imagens), [item?.imagens]);
+    const videoUrls = useMemo(() => toAbsoluteMediaUrls(item?.videos), [item?.videos]);
+    const allMedia: MediaItem[] = useMemo(
+        () => [
+            ...imageUrls.map((url) => ({ type: 'image' as const, url })),
+            ...videoUrls.map((url) => ({ type: 'video' as const, url })),
+        ],
+        [imageUrls, videoUrls]
+    );
+    const currentMedia = allMedia[currentMediaIndex];
 
     const cardWidth = useMemo(() => {
         const safeWidth = Number.isFinite(windowWidth) && windowWidth > 0 ? windowWidth : (layout?.cardWidthFallback ?? 375);
@@ -82,11 +100,8 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, onPress, accessib
         return clamped * (layout?.cardWidthRatio ?? 0.9);
     }, [windowWidth]);
 
-    const mainImageUri = item?.imagens?.[0];
-
-    const resolvedImageSource = useMemo(() => {
-        return imageErrored || !mainImageUri ? { uri: FALLBACK_IMAGE } : { uri: mainImageUri };
-    }, [imageErrored, mainImageUri]);
+    // placeholder: manter referência de fallback quando não houver mídias válidas
+    const hasMedia = allMedia.length > 0;
 
     const precoNumber = typeof item?.preco === 'number' ? item.preco : Number(item?.preco ?? 0);
     const safePrice = Number.isFinite(precoNumber) && precoNumber >= 0 ? precoNumber : 0;
@@ -116,9 +131,39 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, onPress, accessib
     );
 
     const handleImageError = useCallback(() => setImageErrored(true), []);
-    const handlePress = useCallback(() => {
-        if (onPress) onPress(item);
-    }, [item, onPress]);
+
+    const onMediaLayout = useCallback((e: LayoutChangeEvent) => {
+        setMediaWidth(e.nativeEvent.layout.width || 0);
+    }, []);
+
+    const handleMediaPress = useCallback((event: GestureResponderEvent) => {
+        const x = event.nativeEvent?.locationX ?? 0;
+        const width = mediaWidth || cardWidth;
+        if (!width || width <= 0) return;
+        const left = width / 3;
+        const right = (2 * width) / 3;
+        if (x < left) {
+            setCurrentMediaIndex((prev) => Math.max(0, prev - 1));
+        } else if (x > right) {
+            setCurrentMediaIndex((prev) => Math.min(allMedia.length - 1, prev + 1));
+        } else {
+            // centro: reservado para toggle de som (futuro)
+        }
+    }, [mediaWidth, cardWidth, allMedia.length]);
+
+    // Resetar mídia quando o card deixar de ser ativo e quando o item mudar
+    useEffect(() => {
+        if (!isActiveCard) setCurrentMediaIndex(0);
+    }, [isActiveCard]);
+
+    useEffect(() => {
+        setCurrentMediaIndex(0);
+        setImageErrored(false);
+    }, [item?._id]);
+
+    useEffect(() => {
+        setImageErrored(false);
+    }, [currentMediaIndex]);
 
     return (
         <Card
@@ -128,22 +173,44 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, onPress, accessib
             accessibilityRole="button"
             accessibilityLabel={accessibilityCardLabel}
             accessibilityHint={accessibilityHint || strings.accessibility.hint}
-            accessibilityState={{ disabled: !onPress, error: imageErrored }}
-            onPress={onPress ? handlePress : undefined}
             testID="offer-swipe-card"
         >
-            <View style={styles.imageContainer} accessibilityRole="image" accessibilityLabel={accessibilityImageLabel}>
-                <Image
-                    source={resolvedImageSource}
-                    style={styles.image}
-                    contentFit="cover"
-                    transition={300}
-                    accessibilityLabel={accessibilityImageLabel}
-                    accessibilityIgnoresInvertColors={false}
-                    placeholder={PLACEHOLDER_BLURHASH}
-                    onError={handleImageError}
-                />
-            </View>
+            <Pressable
+                style={styles.imageContainer}
+                onPress={handleMediaPress}
+                onLayout={onMediaLayout}
+                accessibilityRole="image"
+                accessibilityLabel={accessibilityImageLabel}
+                accessibilityHint="Toque à esquerda/direita para navegar entre as mídias"
+            >
+                <MediaProgressIndicator count={allMedia.length} currentIndex={currentMediaIndex} />
+                {currentMedia ? (
+                    currentMedia.type === 'video' ? (
+                        <VideoViewWrapper url={currentMedia.url} isActive={isActiveCard} />
+                    ) : (
+                        <Image
+                            source={{ uri: imageErrored ? FALLBACK_IMAGE : currentMedia.url }}
+                            style={styles.image}
+                            contentFit="cover"
+                            transition={300}
+                            accessibilityLabel={accessibilityImageLabel}
+                            accessibilityIgnoresInvertColors={false}
+                            placeholder={PLACEHOLDER_BLURHASH}
+                            onError={handleImageError}
+                        />
+                    )
+                ) : (
+                    <Image
+                        source={{ uri: FALLBACK_IMAGE }}
+                        style={styles.image}
+                        contentFit="cover"
+                        transition={300}
+                        accessibilityLabel={accessibilityImageLabel}
+                        accessibilityIgnoresInvertColors={false}
+                        placeholder={PLACEHOLDER_BLURHASH}
+                    />
+                )}
+            </Pressable>
 
             <View style={styles.contentContainer}>
                 <View style={styles.headerSection}>
@@ -223,6 +290,28 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, onPress, accessib
                 </View>
             </View>
         </Card>
+    );
+};
+
+// Componente interno de vídeo com auto play/pause baseado em visibilidade do card
+const VideoViewWrapper: React.FC<{ url: string; isActive: boolean }> = ({ url, isActive }) => {
+    const player = useVideoPlayer(url, (p) => {
+        p.loop = true;
+        p.muted = true;
+    });
+
+    useEffect(() => {
+        try {
+            if (isActive) player.play(); else player.pause();
+        } catch {}
+    }, [isActive, player, url]);
+
+    return (
+        <VideoView
+            player={player}
+            style={styles.image}
+            contentFit="cover"
+        />
     );
 };
 
@@ -330,6 +419,16 @@ const styles = StyleSheet.create({
     },
 });
 
+const arraysShallowEqual = (a?: string[], b?: string[]) => {
+    if (a === b) return true;
+    if (!a || !b) return !a && !b;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false;
+    }
+    return true;
+};
+
 const areEqual = (prev: OfferSwipeCardProps, next: OfferSwipeCardProps) => {
     // Validação básica de existência do item
     if (!prev.item || !next.item) return prev.item === next.item;
@@ -347,12 +446,13 @@ const areEqual = (prev: OfferSwipeCardProps, next: OfferSwipeCardProps) => {
         prev.item.titulo === next.item.titulo &&
         prev.item.descricao === next.item.descricao &&
         prev.item.categoria === next.item.categoria &&
-        prev.item.imagens?.[0] === next.item.imagens?.[0] &&
+        arraysShallowEqual(prev.item.imagens, next.item.imagens) &&
+        arraysShallowEqual(prev.item.videos, next.item.videos) &&
         prev.item.prestador?.nome === next.item.prestador?.nome &&
         prev.item.prestador?.avatar === next.item.prestador?.avatar &&
         prev.item.localizacao?.cidade === next.item.localizacao?.cidade &&
         prev.accessibilityHint === next.accessibilityHint &&
-        prev.onPress === next.onPress
+        prev.isActiveCard === next.isActiveCard
     );
 };
 

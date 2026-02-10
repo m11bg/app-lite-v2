@@ -7,7 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { OfertasStackParamList } from '@/types';
-import { OfertaServico } from '@/types/oferta';
+import { OfertaServico, OfertaFilters } from '@/types/oferta';
 import { ofertaService } from '@/services/ofertaService';
 import { interactionService } from '@/services/interactionService';
 import OfferSwipeCard from '@/components/offers/OfferSwipeCard';
@@ -109,8 +109,8 @@ const SwipeOfertasScreen: React.FC = () => {
             try {
                 // Prepara os filtros incluindo o userId se autenticado para evitar ofertas repetidas
                 const filters: OfertaFilters = {};
-                const currentUserId = user?.id || (user as any)?._id;
-                if (isAuthenticated && currentUserId) {
+                const currentUserId = user?.id;
+                if (isAuthenticated && typeof currentUserId === 'string' && currentUserId.length > 0) {
                     filters.userId = currentUserId;
                 }
 
@@ -127,9 +127,9 @@ const SwipeOfertasScreen: React.FC = () => {
                 setOfertas((prev) => (append ? [...prev, ...newOfertas] : newOfertas));
                 if (!append) setCurrentIndex(0);
                 setIsEmpty(!append ? newOfertas.length === 0 : newOfertas.length === 0 && noMorePages);
-            } catch (err: any) {
+            } catch (err: unknown) {
                 if (controller.signal.aborted) return;
-                const message = err?.message
+                const message = err instanceof Error && err.message
                     ? `Erro ao carregar ofertas: ${err.message}`
                     : 'Erro ao carregar ofertas. Verifique sua conexão.';
                 setError(message);
@@ -255,16 +255,14 @@ const SwipeOfertasScreen: React.FC = () => {
         const swiper = swiperRef.current;
         if (!swiper || ofertas.length === 0) return;
         try {
-            const swiperCurrentIndex = (swiper as any).currentIndex;
-            if (typeof swiperCurrentIndex === 'number' && swiperCurrentIndex <= 0) return;
-            
+            if (currentIndex <= 0) return;
             swiper.swipeBack();
             Vibration.vibrate(10);
             setCurrentIndex((prev) => Math.max(0, prev - 1));
         } catch (err) {
             if (__DEV__) console.error(err);
         }
-    }, [ofertas.length]);
+    }, [ofertas.length, currentIndex]);
 
     /**
      * Recarrega as ofertas do zero (pull-to-refresh) limpando estados de paginação e vazio.
@@ -287,10 +285,10 @@ const SwipeOfertasScreen: React.FC = () => {
      * @returns {React.JSX.Element} Componente de carta de oferta.
      */
     const renderCard = useCallback(
-        (item: OfertaServico) => (
-            <OfferSwipeCard item={item} onPress={(oferta) => navigation.navigate('OfferDetail', { oferta })} />
+        (item: OfertaServico, index: number) => (
+            <OfferSwipeCard item={item} isActiveCard={index === currentIndex} />
         ),
-        [navigation]
+        [currentIndex]
     );
     /**
      * Renderiza o overlay de like com callback estável para o Swiper.
@@ -354,6 +352,7 @@ const SwipeOfertasScreen: React.FC = () => {
                     onSwipeRight={handleSwipeRight}
                     onSwipeLeft={handleSwipeLeft}
                     onSwipedAll={handleSwipedAll}
+                    onIndexChange={setCurrentIndex}
                     cardStyle={[styles.cardContainer, { width: cardWidth }]}
                 />
             </View>
