@@ -205,7 +205,7 @@ export const useOfertaSwipe = () => {
      * @param {number} index - O índice da oferta que sofreu o swipe.
      */
     const handleSwipeRight = useCallback(
-        (index: number) => {
+        async (index: number) => {
             const oferta = ofertas[index];
             if (!oferta) return;
 
@@ -213,11 +213,18 @@ export const useOfertaSwipe = () => {
             Vibration.vibrate(10);
             setCurrentIndex(index + 1);
 
-            // Registra a interação de Like de forma assíncrona ("fire and forget")
+            // Registra a interação de Like no servidor
             if (isAuthenticated) {
-                void interactionService.likeOffer(oferta._id).catch((err) => {
-                    if (__DEV__) console.error(err);
-                });
+                try {
+                    await interactionService.likeOffer(oferta._id);
+                } catch (err) {
+                    if (__DEV__) console.error('Erro ao curtir oferta:', err);
+                    
+                    // Reverte o estado visual e o índice em caso de falha
+                    setError('Falha ao registrar interesse. Verifique sua conexão.');
+                    swiperRef.current?.swipeBack();
+                    setCurrentIndex(index);
+                }
             }
 
             // Se o usuário estiver chegando perto do fim das ofertas carregadas, busca mais
@@ -225,7 +232,7 @@ export const useOfertaSwipe = () => {
                 scheduleNextPage();
             }
         },
-        [isAuthenticated, ofertas, scheduleNextPage]
+        [isAuthenticated, ofertas, scheduleNextPage, setError]
     );
 
     /**
@@ -235,7 +242,7 @@ export const useOfertaSwipe = () => {
      * @param {number} index - O índice da oferta que sofreu o swipe.
      */
     const handleSwipeLeft = useCallback(
-        (index: number) => {
+        async (index: number) => {
             const oferta = ofertas[index];
             if (!oferta) return;
 
@@ -243,11 +250,18 @@ export const useOfertaSwipe = () => {
             Vibration.vibrate(10);
             setCurrentIndex(index + 1);
 
-            // Registra a interação de Dislike de forma assíncrona
+            // Registra a interação de Dislike no servidor
             if (isAuthenticated) {
-                void interactionService.dislikeOffer(oferta._id).catch((err) => {
-                    if (__DEV__) console.error(err);
-                });
+                try {
+                    await interactionService.dislikeOffer(oferta._id);
+                } catch (err) {
+                    if (__DEV__) console.error('Erro ao descurtir oferta:', err);
+                    
+                    // Reverte o estado visual e o índice em caso de falha
+                    setError('Falha ao registrar desinteresse. Verifique sua conexão.');
+                    swiperRef.current?.swipeBack();
+                    setCurrentIndex(index);
+                }
             }
 
             // Se o usuário estiver chegando perto do fim das ofertas carregadas, busca mais
@@ -255,7 +269,7 @@ export const useOfertaSwipe = () => {
                 scheduleNextPage();
             }
         },
-        [isAuthenticated, ofertas, scheduleNextPage]
+        [isAuthenticated, ofertas, scheduleNextPage, setError]
     );
 
     /**
