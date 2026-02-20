@@ -14,6 +14,7 @@ const emailEnvSchema = z.object({
     SMTP_USER: z.string().optional(),
     SMTP_PASS: z.string().optional(),
     EMAIL_FROM: z.string().default('noreply@applite.com'),
+    APP_URL: z.string().optional(),
 });
 
 /** Instância validada das variáveis de ambiente */
@@ -154,16 +155,58 @@ class EmailService {
      * @description Envia um e-mail de redefinição de senha com um token único.
      * @param {string} to - E-mail de destino do usuário.
      * @param {string} token - Token de redefinição de senha.
+     * @param {string} [resetCode] - Código de 6 dígitos opcional.
      * @returns {Promise<void>}
      */
-    public async sendResetPasswordEmail(to: string, token: string): Promise<void> {
+    public async sendResetPasswordEmail(to: string, token: string, resetCode?: string): Promise<void> {
+        const primary = '#007AFF';
+        const codeBlock = resetCode
+            ? `<div style="margin-top:16px;text-align:center">
+                 <div style="font-size:28px;letter-spacing:6px;font-weight:700;color:#111">${resetCode}</div>
+               </div>`
+            : '';
+        const baseUrl = (env.APP_URL && env.APP_URL.trim()) ? env.APP_URL.replace(/\/+$/, '') : 'https://app-super.digital';
+        const webLink = `${baseUrl}/api/auth/reset-password/${token}`;
+
         const htmlContent = `
-          <div style="font-family: sans-serif; color: #333; padding: 20px;">
-            <h2>Redefinição de senha</h2>
-            <p>Use o token abaixo para redefinir sua senha (válido por 1 hora):</p>
-            <p><strong>${token}</strong></p>
-          </div>
-        `;
+  <div style="margin:0;padding:0;background:#f5f7fb">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#f5f7fb;padding:24px 0">
+      <tr>
+        <td align="center">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,0.06)">
+            <tr>
+              <td style="padding:24px 24px 8px 24px;background:${primary};color:#fff;font-family:Inter,Segoe UI,Arial,sans-serif">
+                <h1 style="margin:0;font-size:22px;font-weight:700">App Lite</h1>
+                <p style="margin:6px 0 0 0;font-size:13px;opacity:.9">Redefinição de senha</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px;font-family:Inter,Segoe UI,Arial,sans-serif;color:#111">
+                <p style="margin:0 0 12px 0;font-size:16px;line-height:1.5;color:#222">Recebemos uma solicitação para redefinir sua senha.</p>
+                <p style="margin:0 0 16px 0;font-size:14px;line-height:1.6;color:#444">Você pode redefinir agora clicando no botão abaixo. Se preferir, use o código de validação no app.</p>
+                <div style="text-align:center;margin:24px 0">
+                  <a href="${webLink}"
+                     style="display:inline-block;background:${primary};color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600;font-size:15px">
+                    Redefinir Senha Agora
+                  </a>
+                </div>
+                <p style="margin:0 0 8px 0;font-size:13px;color:#555;text-align:center">
+                  Se o botão acima não funcionar, abra o aplicativo e insira o código de validação abaixo:
+                </p>
+                ${codeBlock}
+                <div style="margin-top:24px;border-top:1px solid #eee;padding-top:12px">
+                  <p style="margin:0;color:#666;font-size:12px;line-height:1.5">
+                    Por segurança, este link expira em 1 hora. Se você não solicitou, ignore este e-mail.
+                  </p>
+                </div>
+              </td>
+            </tr>
+          </table>
+          <div style="color:#8898aa;font-size:12px;margin-top:12px;font-family:Inter,Segoe UI,Arial,sans-serif">© ${new Date().getFullYear()} App Lite</div>
+        </td>
+      </tr>
+    </table>
+  </div>`;
 
         await this.send({
             to,

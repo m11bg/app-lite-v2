@@ -136,7 +136,7 @@ export const forgotPasswordSchema = z.object({
  */
 export const resetPasswordSchema = z.object({
     body: z.object({
-        token: z.string().min(10, 'Token inválido'),
+        token: z.string().refine((val) => /^(\d{6}|[a-f0-9]{64})$/i.test(val), 'Token/código inválido'),
         password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres').trim(),
     }).transform(data => ({
         token: data.token,

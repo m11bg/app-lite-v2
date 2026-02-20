@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import type { Router as ExpressRouter, RequestHandler } from 'express';
-import { register, login, getProfile, getPreferences, updatePreferences, forgotPassword, resetPassword } from '../controllers/authController';
+import { register, login, getProfile, getPreferences, updatePreferences, forgotPassword, resetPassword, resetPasswordDeepLink } from '../controllers/authController';
 import { authMiddleware } from '../middleware/auth';
 import { authLimiter } from '../middleware/rateLimiter';
 import { validate } from '../middleware/validation';
@@ -16,6 +16,8 @@ router.post('/register', authLimiterMw, validate(registerSchema), register);
 router.post('/login', authLimiterMw, validate(loginSchema), login);
 router.post('/forgot-password', authLimiterMw, validate(forgotPasswordSchema), forgotPassword);
 router.post('/reset-password', authLimiterMw, validate(resetPasswordSchema), resetPassword);
+// Página intermediária para abrir o app via deep link (GET)
+router.get('/reset-password/:token', resetPasswordDeepLink);
 
 // Rotas protegidas
 router.get('/profile', authMiddleware, getProfile);

@@ -1,10 +1,11 @@
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import crypto from 'crypto';
 import User from '../models'; // O seu User.ts (Model) já está correto e pronto
 import logger, { loggerUtils, signAccessToken } from '../utils';
 import { AuthRequest } from '../middleware/auth';
 import { RegisterInput, LoginInput, ForgotPasswordInput } from '../validation/authValidation';
 import { emailService } from '../services/emailService';
+import config from '../config';
 
 interface AuthenticatedRequest extends AuthRequest {
     // O body agora é corretamente tipado pela validação
@@ -382,12 +383,17 @@ export const forgotPassword = async (req: AuthRequest, res: Response): Promise<v
         const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
         const expires = new Date(Date.now() + 60 * 60 * 1000); // 1h
 
+        // Código de 6 dígitos
+        const resetCode: string = String(Math.floor(100000 + Math.random() * 900000));
+        const resetCodeHash = crypto.createHash('sha256').update(resetCode).digest('hex');
+
         user.resetPasswordToken = tokenHash;
+        user.resetPasswordCode = resetCodeHash;
         user.resetPasswordExpires = expires;
         await user.save();
 
         try {
-            await emailService.sendResetPasswordEmail(user.email, token);
+            await emailService.sendResetPasswordEmail(user.email, token, resetCode);
         } catch (mailErr) {
             logger.error('forgotPassword.emailError', mailErr);
         }
@@ -410,20 +416,29 @@ export const forgotPassword = async (req: AuthRequest, res: Response): Promise<v
  */
 export const resetPassword = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const body = req.body as any;
-        const token = body.token;
-        const senha = body.senha || body.password; // Aceita 'senha' (do transform) ou 'password' (fallback)
+        const body = req.body as { token: string; password?: string; senha?: string };
+        const tokenOrCode = (body.token ?? '').trim();
+        const senha = (body.senha ?? body.password ?? '').trim();
 
-        if (!token || !senha) {
+        if (!tokenOrCode || !senha) {
             res.status(400).json({ success: false, message: 'Token e nova senha são obrigatórios.' });
             return;
         }
 
-        const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-        const user = await User.findOne({
-            resetPasswordToken: tokenHash,
+        const isSixDigits = /^\d{6}$/.test(tokenOrCode);
+        const query: Record<string, unknown> = {
             resetPasswordExpires: { $gt: new Date() },
-        }).select('+senha');
+        };
+
+        if (isSixDigits) {
+            const codeHash = crypto.createHash('sha256').update(tokenOrCode).digest('hex');
+            query.resetPasswordCode = codeHash;
+        } else {
+            const tokenHash = crypto.createHash('sha256').update(tokenOrCode).digest('hex');
+            query.resetPasswordToken = tokenHash;
+        }
+
+        const user = await User.findOne(query).select('+senha');
 
         if (!user) {
             res.status(400).json({ success: false, message: 'Token inválido ou expirado.' });
@@ -435,6 +450,7 @@ export const resetPassword = async (req: AuthRequest, res: Response): Promise<vo
         
         // Limpa explicitamente os campos de recuperação para invalidar o token atual
         user.resetPasswordToken = undefined;
+        user.resetPasswordCode = undefined as unknown as string | undefined;
         user.resetPasswordExpires = undefined;
         
         // Salva as alterações no banco de dados
@@ -460,4 +476,114 @@ export const resetPassword = async (req: AuthRequest, res: Response): Promise<vo
         logger.error('Erro no resetPassword:', error);
         res.status(500).json({ success: false, message: 'Erro interno do servidor' });
     }
+};
+
+/**
+ * @async
+ * @function resetPasswordDeepLink
+ * @description Página intermediária (HTML) que tenta abrir o app via deep link e fornece fallbacks.
+ * Rota: GET /api/auth/reset-password/:token
+ * Não requer autenticação.
+ */
+export const resetPasswordDeepLink = (req: Request, res: Response): void => {
+    const token = String((req.params as any)?.token || '').trim();
+    const schemeUrl = `applite://reset-password/${token}`;
+    // Intent Android: Mais robusto que o esquema customizado em navegadores mobile
+    const androidIntent = `intent://reset-password/${token}#Intent;scheme=applite;package=com.infotechd.applite;end`;
+    
+    // URL da versão WEB do app
+    const webAppUrl = (config as any).WEB_APP_URL || 'https://app-super.digital';
+    const webRedirectUrl = `${webAppUrl.replace(/\/+$/, '')}/reset-password/${token}`;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Redefinir Senha - App Lite</title>
+  <style>
+    body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#f8fafc;margin:0;padding:20px;color:#1e293b;display:flex;align-items:center;justify-content:center;min-height:90vh}
+    .card{max-width:480px;width:100%;background:#fff;border-radius:16px;box-shadow:0 10px 25px rgba(0,0,0,.08);overflow:hidden;text-align:center}
+    .header{background:#007AFF;color:#fff;padding:32px 20px}
+    .content{padding:32px 24px}
+    .btn{display:block;background:#007AFF;color:#fff;text-decoration:none;padding:16px;border-radius:10px;font-weight:700;font-size:16px;margin:12px 0;transition:opacity .2s}
+    .btn:active{opacity:.8}
+    .btn-secondary{background:#f1f5f9;color:#475569;font-size:14px;font-weight:600}
+    .loader{border:3px solid #f3f3f3;border-top:3px solid #007AFF;border-radius:50%;width:24px;height:24px;animation:spin 1s linear infinite;margin:0 auto 16px}
+    @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+    .muted{color:#64748b;font-size:14px;line-height:1.6}
+    .separator{display:flex;align-items:center;text-align:center;margin:24px 0;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:1px}
+    .separator::before,.separator::after{content:'';flex:1;border-bottom:1px solid #e2e8f0}
+    .separator:not(:empty)::before{margin-right:.75em}
+    .separator:not(:empty)::after{margin-left:.75em}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h2 style="margin:0;font-size:24px">App Lite</h2>
+      <div style="opacity:.9;margin-top:4px">Redefinição de senha</div>
+    </div>
+    <div class="content">
+      <div id="loading-state">
+        <div class="loader"></div>
+        <p>Tentando abrir o aplicativo…</p>
+      </div>
+
+      <div id="action-state" style="display:none">
+        <p style="margin-top:0;font-weight:600">Continuar redefinição</p>
+        <p class="muted">Escolha como deseja prosseguir para redefinir sua senha com segurança.</p>
+        
+        <a id="main-btn" href="${schemeUrl}" class="card-btn btn">ABRIR NO APLICATIVO</a>
+        
+        <div id="android-only" style="display:none">
+          <a href="${androidIntent}" class="btn btn-secondary" style="background:#e2e8f0">Tentar via Android Intent</a>
+        </div>
+
+        <div class="separator">ou</div>
+
+        <a href="${webRedirectUrl}" class="btn btn-secondary">REDEFINIR PELO NAVEGADOR</a>
+
+        <p class="muted" style="margin-top:24px;font-size:12px">
+          Se você estiver em um computador ou não tiver o app, escolha a opção pelo navegador.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      var schemeUrl = '${schemeUrl}';
+      var androidIntent = '${androidIntent}';
+      var isAndroid = /Android/i.test(navigator.userAgent);
+      var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      function tryOpen() {
+        // Tenta abrir o app automaticamente apenas se for mobile
+        if (isMobile) {
+          if (isAndroid) {
+            window.location.replace(androidIntent);
+          } else {
+            window.location.replace(schemeUrl);
+          }
+        }
+
+        // Mostra opções manuais (App ou Web) após um curto intervalo ou imediatamente se não for mobile
+        setTimeout(function() {
+          document.getElementById('loading-state').style.display = 'none';
+          document.getElementById('action-state').style.display = 'block';
+          
+          if (isAndroid) {
+            document.getElementById('android-only').style.display = 'block';
+            document.getElementById('main-btn').href = androidIntent;
+          }
+        }, isMobile ? 1800 : 0);
+      }
+
+      window.addEventListener('DOMContentLoaded', tryOpen);
+    })();
+  </script>
+</body>
+</html>`);
 };

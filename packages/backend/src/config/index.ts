@@ -54,6 +54,8 @@ const config = {
     CORS_ALLOWED_ORIGINS,
     // Conjunto para checagens rápidas: usado em server.ts (config.CORS_ALLOWED_ORIGINS_SET.has(origin))
     CORS_ALLOWED_ORIGINS_SET: new Set<string>(CORS_ALLOWED_ORIGINS),
+    // URL do App Web (ex: https://app-super.digital)
+    WEB_APP_URL: process.env.WEB_APP_URL || 'https://app-super.digital',
     // Suporta MONGO_URI e MONGODB_URI (compatível com .env atual)
     MONGO_URI: process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/super-app',
     // Em dev mantém default; em prod, se for fraca/ausente, o boot já falhou acima

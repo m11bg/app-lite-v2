@@ -1,16 +1,32 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { showAlert } from '@/utils/alert';
-import { Button, Text, TextInput } from 'react-native-paper';
+import { Button, Text, TextInput, HelperText } from 'react-native-paper';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '@/types';
 import { authService } from '@/services/authService';
+import { useForm, Controller } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { showAlert } from '@/utils/alert';
 
 /**
  * Propriedades para o componente ResetPasswordScreen.
  * Define os tipos para navegação e parâmetros de rota usando NativeStackScreenProps.
  */
 type Props = NativeStackScreenProps<AuthStackParamList, 'ResetPassword'>;
+
+// Esquema de validação
+const schema = z.object({
+    token: z.string().min(6, 'Informe o token/código').trim(),
+    password: z.string().min(6, 'A nova senha deve ter pelo menos 6 caracteres'),
+    confirmPassword: z.string().min(6, 'Confirme sua nova senha'),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: 'As senhas não coincidem',
+    path: ['confirmPassword'],
+});
+
+// Tipo inferido do schema (sem any)
+type FormData = z.infer<typeof schema>;
 
 /**
  * Tela de Redefinição de Senha.
@@ -20,84 +36,117 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'ResetPassword'>;
  * @returns {JSX.Element} Elemento JSX que renderiza a interface de redefinição de senha.
  */
 const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
-    // Estado para o token de validação. Inicializa com o valor vindo da rota ou vazio.
-    const [token, setToken] = React.useState(route.params?.token ?? '');
-    // Estado para o e-mail (apenas exibição). Inicializa com o valor vindo da rota ou vazio.
-    const [email] = React.useState(route.params?.email ?? '');
-    // Estado para a nova senha que o usuário deseja definir.
-    const [password, setPassword] = React.useState('');
-    // Estado de carregamento para controlar o feedback visual e bloquear interações durante a API.
-    const [loading, setLoading] = React.useState(false);
+    const prefilledToken = route.params?.token ?? '';
 
-    /**
-     * Processa a submissão do formulário de redefinição de senha.
-     * Valida os campos obrigatórios e chama o serviço de autenticação.
-     * 
-     * @async
-     * @returns {Promise<void>} Uma promessa que resolve quando a operação é concluída.
-     */
-    const handleSubmit = async () => {
-        // Validação básica: garante que tanto o token quanto a senha não estão vazios após remover espaços.
-        if (!token.trim() || !password.trim()) {
-            showAlert('Erro', 'Informe token e nova senha.');
-            return;
-        }
+    const { control, handleSubmit, formState: { errors, isSubmitting }, setValue } = useForm<FormData>({
+        resolver: zodResolver(schema),
+        defaultValues: { token: prefilledToken, password: '', confirmPassword: '' },
+        mode: 'onTouched',
+    });
+
+    // Se receber token via deep link, mantém no form; usuário ainda pode editar.
+    React.useEffect(() => {
+        if (prefilledToken) setValue('token', prefilledToken);
+    }, [prefilledToken, setValue]);
+
+    const onSubmit = async (values: FormData) => {
         try {
-            // Inicia o estado de carregamento.
-            setLoading(true);
-            
-            // Chama a API de redefinição de senha passando o token e a nova senha limpos.
+            const { token, password } = values;
             await authService.resetPassword(token.trim(), password.trim());
-            
-            // Exibe mensagem de sucesso caso a API retorne sem erros.
             showAlert('Sucesso', 'Senha redefinida com sucesso.');
-            
-            // Redireciona o usuário para a tela de Login, limpando a tela atual da pilha de navegação.
             navigation.replace('Login');
-        } catch (err: any) {
-            // Captura e exibe qualquer erro ocorrido durante o processo (ex: token inválido, erro de rede).
-            showAlert('Erro', err?.message || 'Não foi possível redefinir a senha.');
-        } finally {
-            // Garante que o estado de carregamento seja desativado ao final, independente do sucesso ou erro.
-            setLoading(false);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'Não foi possível redefinir a senha.';
+            showAlert('Erro', message);
         }
     };
 
+    const showTokenInput = !prefilledToken; // sem deep link => mostra campo explicitamente
+
     return (
         <View style={styles.container}>
-            {/* Título principal da tela */}
             <Text variant="headlineSmall" style={styles.title}>Redefinir senha</Text>
-            
-            {/* Se o e-mail estiver presente, exibe-o como um subtítulo informativo */}
-            {email ? <Text style={styles.subtitle}>Email: {email}</Text> : null}
 
-            {/* Campo de entrada de texto para o Token */}
-            <TextInput
-                mode="outlined"
-                label="Token"
-                value={token}
-                onChangeText={setToken}
-                autoCapitalize="none"
-                style={styles.input}
+            {showTokenInput && (
+                <>
+                    <Controller
+                        name="token"
+                        control={control}
+                        render={({ field: { onChange, onBlur, value } }) => (
+                            <TextInput
+                                mode="outlined"
+                                label="Token/Código (6 dígitos)"
+                                value={value}
+                                onChangeText={onChange}
+                                onBlur={onBlur}
+                                autoCapitalize="none"
+                                keyboardType="default"
+                                style={styles.input}
+                            />
+                        )}
+                    />
+                    <HelperText type="error" visible={!!errors.token}>{errors.token?.message}</HelperText>
+                </>
+            )}
+
+            {!showTokenInput && (
+                <>
+                    <Controller
+                        name="token"
+                        control={control}
+                        render={({ field: { value, onChange } }) => (
+                            <TextInput
+                                mode="outlined"
+                                label="Token"
+                                value={value}
+                                onChangeText={onChange}
+                                autoCapitalize="none"
+                                style={styles.input}
+                            />
+                        )}
+                    />
+                    <HelperText type="info" visible>O token foi preenchido via link.</HelperText>
+                </>
+            )}
+
+            <Controller
+                name="password"
+                control={control}
+                render={({ field: { onChange, onBlur, value } }) => (
+                    <TextInput
+                        mode="outlined"
+                        label="Nova Senha"
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        secureTextEntry
+                        style={styles.input}
+                    />
+                )}
             />
+            <HelperText type="error" visible={!!errors.password}>{errors.password?.message}</HelperText>
 
-            {/* Campo de entrada de texto para a Nova Senha, com mascaramento de caracteres */}
-            <TextInput
-                mode="outlined"
-                label="Nova senha"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                style={styles.input}
+            <Controller
+                name="confirmPassword"
+                control={control}
+                render={({ field: { onChange, onBlur, value } }) => (
+                    <TextInput
+                        mode="outlined"
+                        label="Confirmar Nova Senha"
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        secureTextEntry
+                        style={styles.input}
+                    />
+                )}
             />
+            <HelperText type="error" visible={!!errors.confirmPassword}>{errors.confirmPassword?.message}</HelperText>
 
-            {/* Botão de ação principal: dispara a redefinição de senha */}
-            <Button mode="contained" onPress={handleSubmit} loading={loading} disabled={loading}>
+            <Button mode="contained" onPress={handleSubmit(onSubmit)} loading={isSubmitting} disabled={isSubmitting}>
                 Redefinir senha
             </Button>
-            
-            {/* Botão secundário: permite ao usuário voltar para a tela de login */}
-            <Button onPress={() => navigation.navigate('Login')} style={styles.link} disabled={loading}>
+            <Button onPress={() => navigation.navigate('Login')} style={styles.link} disabled={isSubmitting}>
                 Voltar ao login
             </Button>
         </View>
