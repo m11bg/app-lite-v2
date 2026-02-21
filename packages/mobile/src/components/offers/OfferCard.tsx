@@ -244,14 +244,14 @@ const styles = StyleSheet.create({
         color: colors.primary,
     },
     thumbnail: {
-        width: 64,
-        height: 64,
+        width: 90,
+        height: 90,
         borderRadius: radius.md,
         marginLeft: spacing.sm,
     },
     imagePlaceholder: {
-        width: 64,
-        height: 64,
+        width: 90,
+        height: 90,
         borderRadius: radius.md,
         backgroundColor: colors.backdrop,
         justifyContent: 'center',
