@@ -76,9 +76,10 @@ const SwipeOfertasScreen: React.FC = () => {
                 isActiveCard={index === currentIndex}
                 isMuted={isMuted}
                 onToggleMute={toggleMute}
+                onPress={() => navigation.navigate('OfferDetail', { oferta: item })}
             />
         ),
-        [currentIndex, isMuted, toggleMute]
+        [currentIndex, isMuted, toggleMute, navigation]
     );
     /**
      * Renderiza o overlay de like com callback estável para o Swiper.

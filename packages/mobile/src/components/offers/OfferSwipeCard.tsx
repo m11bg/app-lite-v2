@@ -15,6 +15,7 @@ interface OfferSwipeCardProps {
     accessibilityHint?: string;
     isMuted?: boolean;
     onToggleMute?: () => void;
+    onPress?: () => void;
 }
 
 type MediaItem = { type: 'image' | 'video'; url: string };
@@ -79,7 +80,7 @@ const useOfferCardI18n = () => useMemo(() => offerCardStrings, []);
  * @param {OfertaServico} props.item - Os dados da oferta que serão exibidos no cartão.
  * @returns {React.ReactElement} O elemento JSX que compõe o cartão de oferta.
  */
-const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, accessibilityHint, isMuted: propsMuted, onToggleMute: propsToggleMute }) => {
+const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, accessibilityHint, isMuted: propsMuted, onToggleMute: propsToggleMute, onPress }) => {
     const { width: windowWidth } = useWindowDimensions();
     const [imageErrored, setImageErrored] = useState(false);
     const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
@@ -212,6 +213,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
         <Card
             style={[styles.card, { width: cardWidth }]}
             mode="elevated"
+            onPress={onPress}
             accessible
             accessibilityRole="button"
             accessibilityLabel={accessibilityCardLabel}
@@ -590,7 +592,8 @@ const areEqual = (prev: OfferSwipeCardProps, next: OfferSwipeCardProps) => {
         prev.item.localizacao?.cidade === next.item.localizacao?.cidade &&
         prev.accessibilityHint === next.accessibilityHint &&
         prev.isActiveCard === next.isActiveCard &&
-        prev.isMuted === next.isMuted
+        prev.isMuted === next.isMuted &&
+        prev.onPress === next.onPress
     );
 };
 
