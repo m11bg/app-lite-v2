@@ -68,6 +68,10 @@ const priceFormatter = new Intl.NumberFormat('pt-BR', {
     currency: 'BRL',
 });
 
+// Variável de controle fora do componente para persistir durante a sessão da app
+// Ajuda a identificar se o usuário já descobriu como navegar entre mídias
+let mediaNavigationHintDismissed = false;
+
 const useOfferCardI18n = () => useMemo(() => offerCardStrings, []);
 
 /**
@@ -86,6 +90,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
     const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
     const [mediaWidth, setMediaWidth] = useState(0);
     const [localMuted, setLocalMuted] = useState(true);
+    const [localHintShown, setLocalHintShown] = useState(false);
     const strings = useOfferCardI18n();
 
     const isMuted = propsMuted ?? localMuted;
@@ -171,6 +176,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
     }, []);
 
     const handleMediaPress = useCallback((event: GestureResponderEvent) => {
+        mediaNavigationHintDismissed = true; // Marcar como descoberto em qualquer interação com a mídia
         const x = event.nativeEvent?.locationX ?? 0;
         const width = mediaWidth || cardWidth;
         if (!width || width <= 0) return;
@@ -208,6 +214,41 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
     useEffect(() => {
         setImageErrored(false);
     }, [currentMediaIndex]);
+
+    // Efeito para mostrar uma dica visual sutil (pulse) na primeira vez que vê um card com múltiplas mídias
+    useEffect(() => {
+        if (isActiveCard && !mediaNavigationHintDismissed && !localHintShown && allMedia.length > 1 && currentMediaIndex === 0) {
+            const timer = setTimeout(() => {
+                // Checar novamente se foi dispensado durante o timeout
+                if (mediaNavigationHintDismissed) return;
+
+                Animated.sequence([
+                    Animated.timing(rightFlashAnim, {
+                        toValue: 0.5,
+                        duration: 600,
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(rightFlashAnim, {
+                        toValue: 0,
+                        duration: 600,
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(rightFlashAnim, {
+                        toValue: 0.5,
+                        duration: 600,
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(rightFlashAnim, {
+                        toValue: 0,
+                        duration: 600,
+                        useNativeDriver: true,
+                    }),
+                ]).start(() => setLocalHintShown(true));
+            }, 2500);
+
+            return () => clearTimeout(timer);
+        }
+    }, [isActiveCard, localHintShown, allMedia.length, currentMediaIndex, rightFlashAnim]);
 
     return (
         <Card
