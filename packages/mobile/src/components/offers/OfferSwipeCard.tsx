@@ -258,6 +258,16 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
                     currentMedia.type === 'video' ? (
                         <>
                             <VideoViewWrapper url={currentMedia.url} isActive={isActiveCard} isMuted={isMuted} />
+                            
+                            {/* Sinalização de Vídeo no canto inferior esquerdo */}
+                            <View style={styles.videoIndicator} pointerEvents="none">
+                                <Icon
+                                    name="play"
+                                    size={16}
+                                    color="white"
+                                />
+                            </View>
+
                             {/* Indicador de status de som no canto para vídeos */}
                             <View style={styles.muteStatusIndicator} pointerEvents="none">
                                 <Icon
@@ -460,6 +470,15 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: spacing.sm,
         right: spacing.sm,
+        zIndex: 20,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        borderRadius: radius.full,
+        padding: 6,
+    },
+    videoIndicator: {
+        position: 'absolute',
+        bottom: spacing.sm,
+        left: spacing.sm,
         zIndex: 20,
         backgroundColor: 'rgba(0, 0, 0, 0.4)',
         borderRadius: radius.full,
