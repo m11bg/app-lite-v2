@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Vibration } from 'react-native';
 import { type SwiperCardRefType } from 'rn-swiper-list';
+import { Image } from 'expo-image';
+import { toAbsoluteMediaUrls } from '@/utils/mediaUrl';
 import { OfertaServico, OfertaFilters } from '@/types/oferta';
 import { ofertaService } from '@/services/ofertaService';
 import { interactionService } from '@/services/interactionService';
@@ -197,6 +199,42 @@ export const useOfertaSwipe = () => {
             requestIdRef.current += 1;
         };
     }, [clearPaginationDebounce, loadOfertas]);
+
+    /**
+     * Efeito para realizar o pré-carregamento (prefetch) de mídias dos próximos cards.
+     * Melhora a fluidez do swipe ao garantir que as imagens já estejam no cache
+     * antes mesmo do card ser renderizado ou ficar visível.
+     */
+    useEffect(() => {
+        if (ofertas.length === 0) return;
+
+        const preloadNextItems = () => {
+            // Pré-carrega as mídias dos próximos 3 itens a partir do índice atual
+            const nextIndex = currentIndex + 1;
+            const end = Math.min(nextIndex + 3, ofertas.length);
+
+            for (let i = nextIndex; i < end; i++) {
+                const item = ofertas[i];
+                if (!item) continue;
+
+                // Converte referências de imagens para URLs absolutas
+                const imageUrls = toAbsoluteMediaUrls(item.imagens);
+                
+                // Dispara o prefetch das imagens via expo-image.
+                // Isso garante que as imagens estejam prontas mesmo antes dos cards
+                // serem montados pelo Swiper.
+                imageUrls.forEach((url) => {
+                    try {
+                        Image.prefetch(url);
+                    } catch (e) {
+                        if (__DEV__) console.warn('Erro ao fazer prefetch de imagem:', url, e);
+                    }
+                });
+            }
+        };
+
+        preloadNextItems();
+    }, [currentIndex, ofertas]);
 
     /**
      * Manipula a ação de swipe para a direita (Like).

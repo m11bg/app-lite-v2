@@ -144,6 +144,7 @@ const SwipeOfertasScreen: React.FC = () => {
                     onSwipeLeft={handleSwipeLeft}
                     onSwipedAll={handleSwipedAll}
                     onIndexChange={setCurrentIndex}
+                    prerenderItems={3}
                     cardStyle={[styles.cardContainer, { width: cardWidth }]}
                 />
             </View>
