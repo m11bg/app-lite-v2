@@ -13,6 +13,8 @@ interface OfferSwipeCardProps {
     item: OfertaServico;
     isActiveCard: boolean;
     accessibilityHint?: string;
+    isMuted?: boolean;
+    onToggleMute?: () => void;
 }
 
 type MediaItem = { type: 'image' | 'video'; url: string };
@@ -77,15 +79,26 @@ const useOfferCardI18n = () => useMemo(() => offerCardStrings, []);
  * @param {OfertaServico} props.item - Os dados da oferta que serão exibidos no cartão.
  * @returns {React.ReactElement} O elemento JSX que compõe o cartão de oferta.
  */
-const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, accessibilityHint }) => {
+const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, accessibilityHint, isMuted: propsMuted, onToggleMute: propsToggleMute }) => {
     const { width: windowWidth } = useWindowDimensions();
     const [imageErrored, setImageErrored] = useState(false);
     const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
     const [mediaWidth, setMediaWidth] = useState(0);
+    const [localMuted, setLocalMuted] = useState(true);
     const strings = useOfferCardI18n();
+
+    const isMuted = propsMuted ?? localMuted;
+    const onToggleMute = useCallback(() => {
+        if (propsToggleMute) {
+            propsToggleMute();
+        } else {
+            setLocalMuted((prev) => !prev);
+        }
+    }, [propsToggleMute]);
 
     const leftFlashAnim = useMemo(() => new Animated.Value(0), []);
     const rightFlashAnim = useMemo(() => new Animated.Value(0), []);
+    const centerFlashAnim = useMemo(() => new Animated.Value(0), []);
 
     const triggerFlash = useCallback((anim: Animated.Value) => {
         anim.setValue(0);
@@ -173,9 +186,11 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
                 triggerFlash(rightFlashAnim);
             }
         } else {
-            // centro: reservado para toggle de som (futuro)
+            // centro: toggle de som
+            onToggleMute();
+            triggerFlash(centerFlashAnim);
         }
-    }, [mediaWidth, cardWidth, allMedia.length, currentMediaIndex, triggerFlash, leftFlashAnim, rightFlashAnim]);
+    }, [mediaWidth, cardWidth, allMedia.length, currentMediaIndex, triggerFlash, leftFlashAnim, rightFlashAnim, onToggleMute, centerFlashAnim]);
 
     // Resetar mídia quando o card deixar de ser ativo e quando o item mudar
     useEffect(() => {
@@ -227,9 +242,31 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
                     <Icon name="chevron-right" size={48} color="rgba(255, 255, 255, 0.8)" />
                 </Animated.View>
 
+                {/* Feedback visual central (Flash de Som) */}
+                <Animated.View
+                    style={[styles.flashOverlay, styles.centerFlash, { opacity: centerFlashAnim }]}
+                    pointerEvents="none"
+                >
+                    <Icon
+                        name={isMuted ? 'volume-off' : 'volume-high'}
+                        size={64}
+                        color="rgba(255, 255, 255, 0.9)"
+                    />
+                </Animated.View>
+
                 {currentMedia ? (
                     currentMedia.type === 'video' ? (
-                        <VideoViewWrapper url={currentMedia.url} isActive={isActiveCard} />
+                        <>
+                            <VideoViewWrapper url={currentMedia.url} isActive={isActiveCard} isMuted={isMuted} />
+                            {/* Indicador de status de som no canto para vídeos */}
+                            <View style={styles.muteStatusIndicator} pointerEvents="none">
+                                <Icon
+                                    name={isMuted ? 'volume-off' : 'volume-high'}
+                                    size={16}
+                                    color="white"
+                                />
+                            </View>
+                        </>
                     ) : (
                         <Image
                             source={{ uri: imageErrored ? FALLBACK_IMAGE : currentMedia.url }}
@@ -337,11 +374,15 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
 };
 
 // Componente interno de vídeo com auto play/pause baseado em visibilidade do card
-const VideoViewWrapper: React.FC<{ url: string; isActive: boolean }> = ({ url, isActive }) => {
+const VideoViewWrapper: React.FC<{ url: string; isActive: boolean; isMuted: boolean }> = ({ url, isActive, isMuted }) => {
     const player = useVideoPlayer(url, (p) => {
         p.loop = true;
-        p.muted = true;
+        p.muted = isMuted;
     });
+
+    useEffect(() => {
+        player.muted = isMuted;
+    }, [isMuted, player]);
 
     useEffect(() => {
         try {
@@ -410,6 +451,19 @@ const styles = StyleSheet.create({
         right: 0,
         backgroundColor: 'rgba(255, 255, 255, 0.15)',
         borderTopRightRadius: radius.xl,
+    },
+    centerFlash: {
+        left: '33.3%',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    muteStatusIndicator: {
+        position: 'absolute',
+        bottom: spacing.sm,
+        right: spacing.sm,
+        zIndex: 20,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        borderRadius: radius.full,
+        padding: 6,
     },
     contentContainer: {
         flex: 1,
@@ -514,7 +568,8 @@ const areEqual = (prev: OfferSwipeCardProps, next: OfferSwipeCardProps) => {
         prev.item.prestador?.avatar === next.item.prestador?.avatar &&
         prev.item.localizacao?.cidade === next.item.localizacao?.cidade &&
         prev.accessibilityHint === next.accessibilityHint &&
-        prev.isActiveCard === next.isActiveCard
+        prev.isActiveCard === next.isActiveCard &&
+        prev.isMuted === next.isMuted
     );
 };
 
