@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, useWindowDimensions, Vibration } from 'react-native';
 import { Text, Button, Snackbar, IconButton } from 'react-native-paper';
 import { Swiper } from 'rn-swiper-list';
@@ -37,6 +37,9 @@ const SwipeOfertasScreen: React.FC = () => {
         setError,
     } = useOfertaSwipe();
 
+    const [isMuted, setIsMuted] = useState(true);
+    const toggleMute = useCallback(() => setIsMuted((prev) => !prev), []);
+
     const navigation = useNavigation<NativeStackNavigationProp<OfertasStackParamList>>();
     const { width: windowWidth } = useWindowDimensions();
     const insets = useSafeAreaInsets();
@@ -68,9 +71,14 @@ const SwipeOfertasScreen: React.FC = () => {
      */
     const renderCard = useCallback(
         (item: OfertaServico, index: number) => (
-            <OfferSwipeCard item={item} isActiveCard={index === currentIndex} />
+            <OfferSwipeCard
+                item={item}
+                isActiveCard={index === currentIndex}
+                isMuted={isMuted}
+                onToggleMute={toggleMute}
+            />
         ),
-        [currentIndex]
+        [currentIndex, isMuted, toggleMute]
     );
     /**
      * Renderiza o overlay de like com callback estável para o Swiper.

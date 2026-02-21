@@ -122,6 +122,7 @@ export const radius = {
     lg: 12,
     xl: 16,
     round: 50,
+    full: 9999,
 };
 
 // Design tokens: elevation levels (Android). Para iOS, combine com sombras conforme necessário
