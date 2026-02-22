@@ -11,7 +11,7 @@ import { colors, spacing, radius, layout } from '@/styles/theme';
  * @component
  */
 const OfferSwipeCardSkeleton: React.FC = () => {
-    const { width: windowWidth } = useWindowDimensions();
+    const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
     const cardWidth = React.useMemo(() => {
         const safeWidth = Number.isFinite(windowWidth) && windowWidth > 0 ? windowWidth : (layout?.cardWidthFallback ?? 375);
@@ -19,9 +19,17 @@ const OfferSwipeCardSkeleton: React.FC = () => {
         return clamped * (layout?.cardWidthRatio ?? 0.9);
     }, [windowWidth]);
 
+    const cardMaxHeight = React.useMemo(() => {
+        // Segue a mesma lógica do OfferSwipeCard para manter consistência no deck
+        // Reserva espaço para evitar sobreposição (Header + Status + Actions + Margens)
+        const reservedSpace = Platform.select({ ios: 240, android: 220, default: 230 });
+        const calculated = windowHeight - reservedSpace;
+        return Math.max(380, calculated);
+    }, [windowHeight]);
+
     return (
         <Card
-            style={[styles.card, { width: cardWidth }]}
+            style={[styles.card, { width: cardWidth, maxHeight: cardMaxHeight }]}
             mode="elevated"
             testID="offer-swipe-card-skeleton"
         >
@@ -105,6 +113,7 @@ const styles = StyleSheet.create({
     },
     contentContainer: {
         padding: spacing.md,
+        paddingBottom: spacing.lg, // Paridade com o card real
         gap: spacing.sm,
     },
     headerSection: {

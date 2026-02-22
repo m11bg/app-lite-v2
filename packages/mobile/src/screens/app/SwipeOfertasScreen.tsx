@@ -324,6 +324,7 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-start',
         alignItems: 'center',
         paddingTop: spacing.lg,
+        paddingBottom: 120, // Reserva espaço para os botões de ação não sobreporem o card
     },
     pagingIndicator: {
         position: 'absolute',

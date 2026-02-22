@@ -86,7 +86,7 @@ const useOfferCardI18n = () => useMemo(() => offerCardStrings, []);
  * @returns {React.ReactElement} O elemento JSX que compõe o cartão de oferta.
  */
 const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, accessibilityHint, isMuted: propsMuted, onToggleMute: propsToggleMute, onPress }) => {
-    const { width: windowWidth } = useWindowDimensions();
+    const { width: windowWidth, height: windowHeight } = useWindowDimensions();
     const [imageErrored, setImageErrored] = useState(false);
     const [mediaLoaded, setMediaLoaded] = useState(false);
     const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
@@ -141,6 +141,15 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
         const clamped = Math.max(layout?.minScreenWidth ?? 320, safeWidth);
         return clamped * (layout?.cardWidthRatio ?? 0.9);
     }, [windowWidth]);
+
+    const cardMaxHeight = useMemo(() => {
+        // Calcula uma altura máxima segura para evitar sobreposição com botões de ação
+        // Header (~60) + Status Bar (~30) + Action Buttons (~120) + Margens (~20) = ~230
+        const reservedSpace = Platform.select({ ios: 240, android: 220, default: 230 });
+        const calculated = windowHeight - reservedSpace;
+        // Garante que o card tenha pelo menos 380px de altura para ser minimamente informativo
+        return Math.max(380, calculated);
+    }, [windowHeight]);
 
     // placeholder: manter referência de fallback quando não houver mídias válidas
     const hasMedia = allMedia.length > 0;
@@ -263,7 +272,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
 
     return (
         <Card
-            style={[styles.card, { width: cardWidth }]}
+            style={[styles.card, { width: cardWidth, maxHeight: cardMaxHeight }]}
             mode="elevated"
             onPress={onPress}
             accessible
@@ -595,9 +604,8 @@ const styles = StyleSheet.create({
         padding: 6,
     },
     contentContainer: {
-        flex: 1,
         padding: spacing.md,
-        justifyContent: 'space-between',
+        paddingBottom: spacing.lg, // Respiro suave no rodapé
         gap: spacing.sm,
     },
     headerSection: {
@@ -616,8 +624,7 @@ const styles = StyleSheet.create({
         lineHeight: 24,
     },
     descriptionSection: {
-        flex: 1,
-        justifyContent: 'center',
+        marginVertical: spacing.xs,
     },
     description: {
         color: colors.onSurfaceVariant,
