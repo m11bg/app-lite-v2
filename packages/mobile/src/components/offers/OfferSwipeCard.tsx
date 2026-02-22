@@ -91,6 +91,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
     const [mediaLoaded, setMediaLoaded] = useState(false);
     const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
     const [mediaWidth, setMediaWidth] = useState(0);
+    const [videoProgress, setVideoProgress] = useState(0);
     const [localMuted, setLocalMuted] = useState(true);
     const [localHintShown, setLocalHintShown] = useState(false);
     const strings = useOfferCardI18n();
@@ -208,6 +209,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
         if (!isActiveCard) {
             setCurrentMediaIndex(0);
             setMediaLoaded(false);
+            setVideoProgress(0);
         }
     }, [isActiveCard]);
 
@@ -215,11 +217,13 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
         setCurrentMediaIndex(0);
         setImageErrored(false);
         setMediaLoaded(false);
+        setVideoProgress(0);
     }, [item?._id]);
 
     useEffect(() => {
         setImageErrored(false);
         setMediaLoaded(false);
+        setVideoProgress(0);
     }, [currentMediaIndex]);
 
     // Efeito para mostrar uma dica visual sutil (pulse) na primeira vez que vê um card com múltiplas mídias
@@ -276,7 +280,11 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
                 accessibilityLabel={accessibilityImageLabel}
                 accessibilityHint="Toque à esquerda/direita para navegar entre as mídias"
             >
-                <MediaProgressIndicator count={allMedia.length} currentIndex={currentMediaIndex} />
+                <MediaProgressIndicator 
+                    count={allMedia.length} 
+                    currentIndex={currentMediaIndex} 
+                    progress={currentMedia?.type === 'video' ? videoProgress : 1}
+                />
 
                 {/* Feedback visual esquerdo (Flash + Seta) */}
                 <Animated.View
@@ -322,6 +330,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
                                 isActive={isActiveCard} 
                                 isMuted={isMuted} 
                                 onReady={() => setMediaLoaded(true)}
+                                onProgressUpdate={setVideoProgress}
                             />
                             
                             {/* Sinalização de Vídeo no canto inferior esquerdo */}
@@ -460,11 +469,29 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
 };
 
 // Componente interno de vídeo com auto play/pause baseado em visibilidade do card
-const VideoViewWrapper: React.FC<{ url: string; isActive: boolean; isMuted: boolean; onReady?: () => void }> = ({ url, isActive, isMuted, onReady }) => {
+const VideoViewWrapper: React.FC<{ 
+    url: string; 
+    isActive: boolean; 
+    isMuted: boolean; 
+    onReady?: () => void;
+    onProgressUpdate?: (progress: number) => void;
+}> = ({ url, isActive, isMuted, onReady, onProgressUpdate }) => {
     const player = useVideoPlayer(url, (p) => {
         p.loop = true;
         p.muted = isMuted;
     });
+
+    useEffect(() => {
+        const subscription = player.addListener('timeUpdate', (payload) => {
+            if (onProgressUpdate && player.duration > 0) {
+                onProgressUpdate(payload.currentTime / player.duration);
+            }
+        });
+
+        return () => {
+            subscription.remove();
+        };
+    }, [player, onProgressUpdate]);
 
     useEffect(() => {
         player.muted = isMuted;
