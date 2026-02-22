@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
 import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, radius } from '@/styles/theme';
+import { OFFER_TRANSLATIONS } from '@/constants/translations';
 
 /**
  * Props para o componente SwipeLikeOverlay
@@ -25,13 +26,13 @@ interface SwipeLikeOverlayProps {
  */
 const SwipeLikeOverlay: React.FC<SwipeLikeOverlayProps> = ({ 
     iconSize = 80, 
-    label = 'GOSTEI!' 
+    label = OFFER_TRANSLATIONS.OVERLAYS.LIKE
 }) => (
     <View 
         style={[styles.container, StyleSheet.absoluteFillObject]} 
         pointerEvents="none"
         accessibilityRole="image"
-        accessibilityLabel="Indicação de que você gostou da oferta"
+        accessibilityLabel={OFFER_TRANSLATIONS.OVERLAYS.ACCESSIBILITY_LIKE}
     >
         {/* Ícone de coração centralizado representando a ação de 'Like' */}
         <Icon name="heart" size={iconSize} color={colors.success} />

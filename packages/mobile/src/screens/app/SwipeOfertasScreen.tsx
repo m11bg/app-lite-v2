@@ -14,6 +14,7 @@ import SwipeLikeOverlay from '@/components/offers/SwipeLikeOverlay';
 import SwipeNopeOverlay from '@/components/offers/SwipeNopeOverlay';
 import { useOfertaSwipe } from '@/hooks/useOfertaSwipe';
 import { colors, spacing, radius, layout } from '@/styles/theme';
+import { OFFER_TRANSLATIONS } from '@/constants/translations';
 
 /**
  * Tela principal de exibição de ofertas no formato de "swipe" (cartões deslizáveis).
@@ -53,7 +54,7 @@ const SwipeOfertasScreen: React.FC = () => {
             <IconButton
                 icon="format-list-bulleted"
                 onPress={() => navigation.navigate('BuscarOfertas')}
-                accessibilityLabel="Mudar para lista"
+                accessibilityLabel={OFFER_TRANSLATIONS.ACTIONS.SWITCH_TO_LIST}
                 accessibilityRole="button"
             />
         ),
@@ -126,7 +127,7 @@ const SwipeOfertasScreen: React.FC = () => {
                 
                 <View style={styles.loadingInfo}>
                     <Text variant="bodyMedium" style={styles.loadingText}>
-                        Buscando as melhores ofertas...
+                        {OFFER_TRANSLATIONS.SCREEN.LOADING}
                     </Text>
                 </View>
             </View>
@@ -137,22 +138,22 @@ const SwipeOfertasScreen: React.FC = () => {
     if (isEmpty) {
         return (
             <View style={styles.centerContainer}>
-                <Icon name="cards-outline" size={80} color={colors.onSurfaceVariant} accessibilityLabel="Sem ofertas" />
+                <Icon name="cards-outline" size={80} color={colors.onSurfaceVariant} accessibilityLabel={OFFER_TRANSLATIONS.SCREEN.EMPTY_TITLE} />
                 <Text variant="headlineSmall" style={styles.emptyTitle}>
-                    Sem mais ofertas
+                    {OFFER_TRANSLATIONS.SCREEN.EMPTY_TITLE}
                 </Text>
                 <Text variant="bodyMedium" style={styles.emptyText}>
-                    Você já viu todas as ofertas disponíveis no momento.
+                    {OFFER_TRANSLATIONS.SCREEN.EMPTY_TEXT}
                 </Text>
                 <Button
                     mode="contained"
                     onPress={handleRefresh}
                     style={styles.refreshButton}
                     loading={isRefreshing}
-                    accessibilityLabel="Atualizar ofertas"
+                    accessibilityLabel={OFFER_TRANSLATIONS.SCREEN.REFRESH_BUTTON}
                     accessibilityRole="button"
                 >
-                    Atualizar
+                    {OFFER_TRANSLATIONS.SCREEN.REFRESH_BUTTON}
                 </Button>
             </View>
         );
@@ -190,7 +191,7 @@ const SwipeOfertasScreen: React.FC = () => {
                     }}
                     style={styles.actionButton}
                     hitSlop={10}
-                    accessibilityLabel="Descartar oferta"
+                    accessibilityLabel={OFFER_TRANSLATIONS.ACTIONS.DISLIKE}
                 />
 
                 {/* Botão para desfazer o último movimento */}
@@ -203,7 +204,7 @@ const SwipeOfertasScreen: React.FC = () => {
                     disabled={currentIndex === 0}
                     style={[styles.undoButton, currentIndex === 0 && { opacity: 0.5 }]}
                     hitSlop={10}
-                    accessibilityLabel="Desfazer último swipe"
+                    accessibilityLabel={OFFER_TRANSLATIONS.ACTIONS.UNDO}
                 />
 
                 {/* Botão para curtir a oferta (Swipe Right) */}
@@ -218,7 +219,7 @@ const SwipeOfertasScreen: React.FC = () => {
                     }}
                     style={styles.actionButton}
                     hitSlop={10}
-                    accessibilityLabel="Curtir oferta"
+                    accessibilityLabel={OFFER_TRANSLATIONS.ACTIONS.LIKE}
                 />
             </View>
 
@@ -226,7 +227,7 @@ const SwipeOfertasScreen: React.FC = () => {
                 <View style={styles.pagingIndicator}>
                     <ActivityIndicator size="small" color={colors.primary} />
                     <Text variant="bodySmall" style={styles.loadingText}>
-                        Carregando mais ofertas...
+                        {OFFER_TRANSLATIONS.SCREEN.PAGING_INDICATOR}
                     </Text>
                 </View>
             )}
@@ -235,7 +236,7 @@ const SwipeOfertasScreen: React.FC = () => {
                 visible={!!error}
                 onDismiss={() => setError(null)}
                 action={{
-                    label: 'Tentar novamente',
+                    label: OFFER_TRANSLATIONS.SCREEN.RETRY_LABEL,
                     onPress: handleRetry,
                 }}
             >

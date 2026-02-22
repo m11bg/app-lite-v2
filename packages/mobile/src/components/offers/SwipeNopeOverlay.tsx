@@ -9,6 +9,7 @@ import { Text } from 'react-native-paper';
 import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 // Importação de tokens de design do tema global
 import { colors, radius } from '@/styles/theme';
+import { OFFER_TRANSLATIONS } from '@/constants/translations';
 
 /**
  * Props para o componente SwipeNopeOverlay
@@ -30,13 +31,13 @@ interface SwipeNopeOverlayProps {
  */
 const SwipeNopeOverlay: React.FC<SwipeNopeOverlayProps> = ({ 
     iconSize = 80, 
-    label = 'NÃO' 
+    label = OFFER_TRANSLATIONS.OVERLAYS.NOPE
 }) => (
     <View 
         style={[styles.container, StyleSheet.absoluteFillObject]} 
         pointerEvents="none"
         accessibilityRole="image"
-        accessibilityLabel="Indicação de que você não gostou da oferta"
+        accessibilityLabel={OFFER_TRANSLATIONS.OVERLAYS.ACCESSIBILITY_NOPE}
     >
         {/* Ícone de fechar para indicar visualmente a rejeição */}
         <Icon name="close" size={iconSize} color={colors.error} />

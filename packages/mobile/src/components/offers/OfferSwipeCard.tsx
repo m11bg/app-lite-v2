@@ -9,6 +9,7 @@ import { toAbsoluteMediaUrls } from '@/utils/mediaUrl';
 import { OfertaServico } from '@/types/oferta';
 import { colors, spacing, radius, layout } from '@/styles/theme';
 import { SkeletonBox } from '@/components/profile/skeletons/SkeletonPrimitives';
+import { OFFER_TRANSLATIONS } from '@/constants/translations';
 
 interface OfferSwipeCardProps {
     item: OfertaServico;
@@ -21,46 +22,6 @@ interface OfferSwipeCardProps {
 
 type MediaItem = { type: 'image' | 'video'; url: string };
 
-type OfferCardI18n = {
-    fallbacks: {
-        title: string;
-        description: string;
-        city: string;
-        provider: string;
-        priceUnit: string;
-        imageText: string;
-    };
-    accessibility: {
-        hint: string;
-        categoryPrefix: string;
-        titlePrefix: string;
-        descriptionPrefix: string;
-        pricePrefix: string;
-        imagePrefix: string;
-        providerPrefix: string;
-    };
-};
-
-const offerCardStrings: OfferCardI18n = {
-    fallbacks: {
-        title: 'Serviço não informado',
-        description: 'Descrição não informada',
-        city: 'Cidade não informada',
-        provider: 'Prestador',
-        priceUnit: 'unidade',
-        imageText: 'Oferta',
-    },
-    accessibility: {
-        hint: 'Abre os detalhes da oferta',
-        categoryPrefix: 'Categoria',
-        titlePrefix: 'Título',
-        descriptionPrefix: 'Descrição',
-        pricePrefix: 'Preço',
-        imagePrefix: 'Imagem da oferta',
-        providerPrefix: 'Prestador',
-    },
-};
-
 const FALLBACK_IMAGE = 'https://via.placeholder.com/800x600?text=Oferta';
 const PLACEHOLDER_BLURHASH = 'L5H2EC=PM+yV0g-mq.wG9c010J}I';
 
@@ -72,8 +33,6 @@ const priceFormatter = new Intl.NumberFormat('pt-BR', {
 // Variável de controle fora do componente para persistir durante a sessão da app
 // Ajuda a identificar se o usuário já descobriu como navegar entre mídias
 let mediaNavigationHintDismissed = false;
-
-const useOfferCardI18n = () => useMemo(() => offerCardStrings, []);
 
 /**
  * Componente que renderiza um cartão individual para a funcionalidade de "Swipe" (deslizar) de ofertas.
@@ -94,7 +53,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
     const [videoProgress, setVideoProgress] = useState(0);
     const [localMuted, setLocalMuted] = useState(true);
     const [localHintShown, setLocalHintShown] = useState(false);
-    const strings = useOfferCardI18n();
+    const strings = OFFER_TRANSLATIONS.CARD;
 
     const isMuted = propsMuted ?? localMuted;
     const onToggleMute = useCallback(() => {
@@ -159,26 +118,26 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
 
     const formattedPrice = useMemo(() => priceFormatter.format(safePrice), [safePrice]);
 
-    const categoria = useMemo(() => (item?.categoria?.trim() || strings.fallbacks.imageText).toUpperCase(), [item?.categoria, strings.fallbacks.imageText]);
-    const titulo = item?.titulo?.trim() || strings.fallbacks.title;
-    const descricao = item?.descricao?.trim() || strings.fallbacks.description;
-    const unidadePreco = item?.unidadePreco?.trim() || strings.fallbacks.priceUnit;
-    const prestadorNome = item?.prestador?.nome?.trim() || strings.fallbacks.provider;
-    const cidade = item?.localizacao?.cidade?.trim() || strings.fallbacks.city;
+    const categoria = useMemo(() => (item?.categoria?.trim() || strings.FALLBACKS.IMAGE_TEXT).toUpperCase(), [item?.categoria, strings.FALLBACKS.IMAGE_TEXT]);
+    const titulo = item?.titulo?.trim() || strings.FALLBACKS.TITLE;
+    const descricao = item?.descricao?.trim() || strings.FALLBACKS.DESCRIPTION;
+    const unidadePreco = item?.unidadePreco?.trim() || strings.FALLBACKS.PRICE_UNIT;
+    const prestadorNome = item?.prestador?.nome?.trim() || strings.FALLBACKS.PROVIDER;
+    const cidade = item?.localizacao?.cidade?.trim() || strings.FALLBACKS.CITY;
     const avatarUri = item?.prestador?.avatar;
 
     const accessibilityCardLabel = useMemo(() => `Oferta: ${titulo} em ${cidade}`, [titulo, cidade]);
     const accessibilityImageLabel = useMemo(
-        () => `${strings.accessibility.imagePrefix} ${titulo}`,
-        [strings.accessibility.imagePrefix, titulo],
+        () => `${strings.ACCESSIBILITY.IMAGE_PREFIX} ${titulo}`,
+        [strings.ACCESSIBILITY.IMAGE_PREFIX, titulo],
     );
     const accessibilityPrestadorLabel = useMemo(
-        () => `${strings.accessibility.providerPrefix} ${prestadorNome} de ${cidade}`,
-        [strings.accessibility.providerPrefix, prestadorNome, cidade],
+        () => `${strings.ACCESSIBILITY.PROVIDER_PREFIX} ${prestadorNome} de ${cidade}`,
+        [strings.ACCESSIBILITY.PROVIDER_PREFIX, prestadorNome, cidade],
     );
     const accessibilityPriceLabel = useMemo(
-        () => `${strings.accessibility.pricePrefix} ${formattedPrice} por ${unidadePreco}`,
-        [formattedPrice, strings.accessibility.pricePrefix, unidadePreco],
+        () => `${strings.ACCESSIBILITY.PRICE_PREFIX} ${formattedPrice} por ${unidadePreco}`,
+        [formattedPrice, strings.ACCESSIBILITY.PRICE_PREFIX, unidadePreco],
     );
 
     const handleImageError = useCallback(() => setImageErrored(true), []);
@@ -278,7 +237,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
             accessible
             accessibilityRole="button"
             accessibilityLabel={accessibilityCardLabel}
-            accessibilityHint={accessibilityHint || strings.accessibility.hint}
+            accessibilityHint={accessibilityHint || strings.ACCESSIBILITY.HINT}
             testID="offer-swipe-card"
         >
             <Pressable
@@ -287,7 +246,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
                 onLayout={onMediaLayout}
                 accessibilityRole="image"
                 accessibilityLabel={accessibilityImageLabel}
-                accessibilityHint="Toque à esquerda/direita para navegar entre as mídias"
+                accessibilityHint={strings.ACCESSIBILITY.MEDIA_NAV_HINT}
             >
                 <MediaProgressIndicator 
                     count={allMedia.length} 
@@ -401,7 +360,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
                     <Text
                         variant="labelSmall"
                         style={styles.categoryLabel}
-                        accessibilityLabel={`${strings.accessibility.categoryPrefix} ${categoria}`}
+                        accessibilityLabel={`${strings.ACCESSIBILITY.CATEGORY_PREFIX} ${categoria}`}
                         accessibilityRole="text"
                     >
                         {categoria}
@@ -411,7 +370,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
                         style={styles.title}
                         numberOfLines={2}
                         ellipsizeMode="tail"
-                        accessibilityLabel={`${strings.accessibility.titlePrefix} ${titulo}`}
+                        accessibilityLabel={`${strings.ACCESSIBILITY.TITLE_PREFIX} ${titulo}`}
                         accessibilityRole="text"
                     >
                         {titulo}
@@ -424,7 +383,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
                         style={styles.description}
                         numberOfLines={3}
                         ellipsizeMode="tail"
-                        accessibilityLabel={`${strings.accessibility.descriptionPrefix} ${descricao}`}
+                        accessibilityLabel={`${strings.ACCESSIBILITY.DESCRIPTION_PREFIX} ${descricao}`}
                         accessibilityRole="text"
                     >
                         {descricao}
