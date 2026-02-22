@@ -47,6 +47,7 @@ let mediaNavigationHintDismissed = false;
 const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, accessibilityHint, isMuted: propsMuted, onToggleMute: propsToggleMute, onPress }) => {
     const { width: windowWidth, height: windowHeight } = useWindowDimensions();
     const [imageErrored, setImageErrored] = useState(false);
+    const [videoErrored, setVideoErrored] = useState(false);
     const [mediaLoaded, setMediaLoaded] = useState(false);
     const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
     const [mediaWidth, setMediaWidth] = useState(0);
@@ -142,6 +143,11 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
 
     const handleImageError = useCallback(() => setImageErrored(true), []);
 
+    const handleVideoError = useCallback((err: any) => {
+        if (__DEV__) console.warn('Erro ao carregar ou reproduzir vídeo:', err);
+        setVideoErrored(true);
+    }, []);
+
     const onMediaLayout = useCallback((e: LayoutChangeEvent) => {
         setMediaWidth(e.nativeEvent.layout.width || 0);
     }, []);
@@ -178,18 +184,21 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
             setCurrentMediaIndex(0);
             setMediaLoaded(false);
             setVideoProgress(0);
+            setVideoErrored(false);
         }
     }, [isActiveCard]);
 
     useEffect(() => {
         setCurrentMediaIndex(0);
         setImageErrored(false);
+        setVideoErrored(false);
         setMediaLoaded(false);
         setVideoProgress(0);
     }, [item?._id]);
 
     useEffect(() => {
         setImageErrored(false);
+        setVideoErrored(false);
         setMediaLoaded(false);
         setVideoProgress(0);
     }, [currentMediaIndex]);
@@ -285,39 +294,55 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
                 {currentMedia ? (
                     currentMedia.type === 'video' ? (
                         <View style={styles.image}>
-                            {!mediaLoaded && (
-                                <SkeletonBox
-                                    width="100%"
-                                    height="100%"
-                                    radius={0}
-                                    style={StyleSheet.absoluteFill}
-                                />
-                            )}
-                            <VideoViewWrapper 
-                                url={currentMedia.url} 
-                                isActive={isActiveCard} 
-                                isMuted={isMuted} 
-                                onReady={() => setMediaLoaded(true)}
-                                onProgressUpdate={setVideoProgress}
-                            />
-                            
-                            {/* Sinalização de Vídeo no canto inferior esquerdo */}
-                            <View style={[styles.videoIndicator, { opacity: mediaLoaded ? 1 : 0 }]} pointerEvents="none">
-                                <Icon
-                                    name="play"
-                                    size={16}
-                                    color="white"
-                                />
-                            </View>
+                            {videoErrored ? (
+                                <>
+                                    <Image
+                                        source={{ uri: FALLBACK_IMAGE }}
+                                        style={styles.image}
+                                        contentFit="cover"
+                                    />
+                                    <View style={styles.errorOverlay}>
+                                        <Icon name="video-off" size={40} color="rgba(255, 255, 255, 0.8)" />
+                                    </View>
+                                </>
+                            ) : (
+                                <>
+                                    {!mediaLoaded && (
+                                        <SkeletonBox
+                                            width="100%"
+                                            height="100%"
+                                            radius={0}
+                                            style={StyleSheet.absoluteFill}
+                                        />
+                                    )}
+                                    <VideoViewWrapper 
+                                        url={currentMedia.url} 
+                                        isActive={isActiveCard} 
+                                        isMuted={isMuted} 
+                                        onReady={() => setMediaLoaded(true)}
+                                        onError={handleVideoError}
+                                        onProgressUpdate={setVideoProgress}
+                                    />
+                                    
+                                    {/* Sinalização de Vídeo no canto inferior esquerdo */}
+                                    <View style={[styles.videoIndicator, { opacity: mediaLoaded ? 1 : 0 }]} pointerEvents="none">
+                                        <Icon
+                                            name="play"
+                                            size={16}
+                                            color="white"
+                                        />
+                                    </View>
 
-                            {/* Indicador de status de som no canto para vídeos */}
-                            <View style={[styles.muteStatusIndicator, { opacity: mediaLoaded ? 1 : 0 }]} pointerEvents="none">
-                                <Icon
-                                    name={isMuted ? 'volume-off' : 'volume-high'}
-                                    size={16}
-                                    color="white"
-                                />
-                            </View>
+                                    {/* Indicador de status de som no canto para vídeos */}
+                                    <View style={[styles.muteStatusIndicator, { opacity: mediaLoaded ? 1 : 0 }]} pointerEvents="none">
+                                        <Icon
+                                            name={isMuted ? 'volume-off' : 'volume-high'}
+                                            size={16}
+                                            color="white"
+                                        />
+                                    </View>
+                                </>
+                            )}
                         </View>
                     ) : (
                         <View style={styles.image}>
@@ -442,24 +467,32 @@ const VideoViewWrapper: React.FC<{
     isActive: boolean; 
     isMuted: boolean; 
     onReady?: () => void;
+    onError?: (error: any) => void;
     onProgressUpdate?: (progress: number) => void;
-}> = ({ url, isActive, isMuted, onReady, onProgressUpdate }) => {
+}> = ({ url, isActive, isMuted, onReady, onError, onProgressUpdate }) => {
     const player = useVideoPlayer(url, (p) => {
         p.loop = true;
         p.muted = isMuted;
     });
 
     useEffect(() => {
-        const subscription = player.addListener('timeUpdate', (payload) => {
+        const timeSub = player.addListener('timeUpdate', (payload) => {
             if (onProgressUpdate && player.duration > 0) {
                 onProgressUpdate(payload.currentTime / player.duration);
             }
         });
 
+        const statusSub = player.addListener('statusChange', (payload: any) => {
+            if (payload.status === 'error' && onError) {
+                onError(payload.error || { message: 'Erro de reprodução de vídeo' });
+            }
+        });
+
         return () => {
-            subscription.remove();
+            timeSub.remove();
+            statusSub.remove();
         };
-    }, [player, onProgressUpdate]);
+    }, [player, onProgressUpdate, onError]);
 
     useEffect(() => {
         player.muted = isMuted;
@@ -475,7 +508,9 @@ const VideoViewWrapper: React.FC<{
             } else {
                 player.pause();
             }
-        } catch {}
+        } catch (err) {
+            if (__DEV__) console.warn('Falha ao controlar reprodução de vídeo:', err);
+        }
     }, [isActive, player, url, onReady]);
 
     return (
@@ -561,6 +596,13 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0, 0, 0, 0.4)',
         borderRadius: radius.full,
         padding: 6,
+    },
+    errorOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 21,
     },
     contentContainer: {
         padding: spacing.md,
