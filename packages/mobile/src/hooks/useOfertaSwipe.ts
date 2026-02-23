@@ -9,9 +9,9 @@ import { interactionService } from '@/services/interactionService';
 import { useAuth } from '@/context/AuthContext';
 
 // Tamanho de página padrão para as requisições da API
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 15;
 // Quantidade de cartas restantes no deck para disparar o pré-carregamento da próxima página
-const PAGINATION_THRESHOLD = 3;
+const PAGINATION_THRESHOLD = 5;
 
 /**
  * Hook customizado para gerenciar o estado e a lógica de negócio da funcionalidade de swipe de ofertas.
@@ -56,6 +56,8 @@ export const useOfertaSwipe = () => {
     const [isEmpty, setIsEmpty] = useState(false);
     // Mantém o rastro de qual carta está sendo visualizada no momento
     const [currentIndex, setCurrentIndex] = useState(0);
+    // Contador para forçar o remount do Swiper em resets (refresh ou swipedAll)
+    const [resetCount, setResetCount] = useState(0);
 
     // Referência para acessar métodos imperativos do Swiper (ex: swipeBack)
     const swiperRef = useRef<SwiperCardRefType>(null);
@@ -139,8 +141,11 @@ export const useOfertaSwipe = () => {
                 // Se append for true, soma à lista atual, senão substitui (usado no refresh/inicial)
                 setOfertas((prev) => (append ? [...prev, ...newOfertas] : newOfertas));
 
-                // Reseta o índice se for uma carga completa
-                if (!append) setCurrentIndex(0);
+                // Se for uma carga completa (não append), resetamos o índice e o contador de remount
+                if (!append) {
+                    setCurrentIndex(0);
+                    setResetCount((prev) => prev + 1);
+                }
 
                 // Define se o estado está vazio
                 setIsEmpty(!append ? newOfertas.length === 0 : newOfertas.length === 0 && noMorePages);
@@ -249,7 +254,6 @@ export const useOfertaSwipe = () => {
 
             // Feedback tátil leve
             Vibration.vibrate(10);
-            setCurrentIndex(index + 1);
 
             // Registra a interação de Like no servidor
             if (isAuthenticated) {
@@ -258,10 +262,9 @@ export const useOfertaSwipe = () => {
                 } catch (err) {
                     if (__DEV__) console.error('Erro ao curtir oferta:', err);
                     
-                    // Reverte o estado visual e o índice em caso de falha
+                    // Reverte o estado visual em caso de falha
                     setError('Falha ao registrar interesse. Verifique sua conexão.');
                     swiperRef.current?.swipeBack();
-                    setCurrentIndex(index);
                 }
             }
 
@@ -286,7 +289,6 @@ export const useOfertaSwipe = () => {
 
             // Feedback tátil leve
             Vibration.vibrate(10);
-            setCurrentIndex(index + 1);
 
             // Registra a interação de Dislike no servidor
             if (isAuthenticated) {
@@ -295,10 +297,9 @@ export const useOfertaSwipe = () => {
                 } catch (err) {
                     if (__DEV__) console.error('Erro ao descurtir oferta:', err);
                     
-                    // Reverte o estado visual e o índice em caso de falha
+                    // Reverte o estado visual em caso de falha
                     setError('Falha ao registrar desinteresse. Verifique sua conexão.');
                     swiperRef.current?.swipeBack();
-                    setCurrentIndex(index);
                 }
             }
 
@@ -315,13 +316,19 @@ export const useOfertaSwipe = () => {
      * Decide se deve carregar a próxima página ou mostrar o estado de lista vazia.
      */
     const handleSwipedAll = useCallback(() => {
-        if (hasMore) {
-            scheduleNextPage();
-        } else {
+        if (!hasMore) {
             // Se não há mais páginas no servidor, marca como vazio
             setIsEmpty(true);
+            return;
         }
-    }, [hasMore, scheduleNextPage]);
+
+        // Quando o usuário consome todas as cartas do deck atual, carregamos a próxima página
+        // substituindo o deck (append = false). Isso evita que o Swiper permaneça em estado
+        // "swiped all" e garante que os novos itens sejam exibidos imediatamente.
+        clearPaginationDebounce();
+        const nextPage = page + 1;
+        void loadOfertas(nextPage, false, 'paginate');
+    }, [hasMore, page, clearPaginationDebounce, loadOfertas]);
 
     /**
      * Permite ao usuário desfazer o último swipe realizado.
@@ -338,7 +345,6 @@ export const useOfertaSwipe = () => {
             // Chama o método nativo do Swiper para voltar a carta
             swiper.swipeBack();
             Vibration.vibrate(10);
-            setCurrentIndex((prev) => Math.max(0, prev - 1));
         } catch (err) {
             if (__DEV__) console.error(err);
         }
@@ -376,7 +382,7 @@ export const useOfertaSwipe = () => {
         error,
         isEmpty,
         currentIndex,
-        hasMore,
+        resetCount,
         swiperRef,
         handleSwipeRight,
         handleSwipeLeft,

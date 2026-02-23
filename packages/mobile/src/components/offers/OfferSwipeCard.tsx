@@ -10,10 +10,13 @@ import { OfertaServico } from '@/types/oferta';
 import { colors, spacing, radius, layout } from '@/styles/theme';
 import { SkeletonBox } from '@/components/profile/skeletons/SkeletonPrimitives';
 import { OFFER_TRANSLATIONS } from '@/constants/translations';
+import { useSwiperIndex } from '@/context/SwiperIndexContext';
 
 interface OfferSwipeCardProps {
     item: OfertaServico;
-    isActiveCard: boolean;
+    // Manter compatibilidade: ainda aceitamos isActiveCard, mas preferimos calcular via contexto + index
+    isActiveCard?: boolean;
+    index?: number;
     accessibilityHint?: string;
     isMuted?: boolean;
     onToggleMute?: () => void;
@@ -44,7 +47,7 @@ let mediaNavigationHintDismissed = false;
  * @param {OfertaServico} props.item - Os dados da oferta que serão exibidos no cartão.
  * @returns {React.ReactElement} O elemento JSX que compõe o cartão de oferta.
  */
-const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, accessibilityHint, isMuted: propsMuted, onToggleMute: propsToggleMute, onPress }) => {
+const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, index, accessibilityHint, isMuted: propsMuted, onToggleMute: propsToggleMute, onPress }) => {
     const { width: windowWidth, height: windowHeight } = useWindowDimensions();
     const [imageErrored, setImageErrored] = useState(false);
     const [videoErrored, setVideoErrored] = useState(false);
@@ -55,6 +58,11 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
     const [localMuted, setLocalMuted] = useState(true);
     const [localHintShown, setLocalHintShown] = useState(false);
     const strings = OFFER_TRANSLATIONS.CARD;
+
+    const currentIndexFromContext = useSwiperIndex();
+    const computedIsActive = typeof index === 'number'
+        ? index === currentIndexFromContext
+        : (typeof isActiveCard === 'boolean' ? isActiveCard : true);
 
     const isMuted = propsMuted ?? localMuted;
     const onToggleMute = useCallback(() => {
@@ -180,13 +188,13 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
 
     // Resetar mídia quando o card deixar de ser ativo e quando o item mudar
     useEffect(() => {
-        if (!isActiveCard) {
+        if (!computedIsActive) {
             setCurrentMediaIndex(0);
             setMediaLoaded(false);
             setVideoProgress(0);
             setVideoErrored(false);
         }
-    }, [isActiveCard]);
+    }, [computedIsActive]);
 
     useEffect(() => {
         setCurrentMediaIndex(0);
@@ -205,7 +213,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
 
     // Efeito para mostrar uma dica visual sutil (pulse) na primeira vez que vê um card com múltiplas mídias
     useEffect(() => {
-        if (isActiveCard && !mediaNavigationHintDismissed && !localHintShown && allMedia.length > 1 && currentMediaIndex === 0) {
+        if (computedIsActive && !mediaNavigationHintDismissed && !localHintShown && allMedia.length > 1 && currentMediaIndex === 0) {
             const timer = setTimeout(() => {
                 // Checar novamente se foi dispensado durante o timeout
                 if (mediaNavigationHintDismissed) return;
@@ -236,7 +244,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
 
             return () => clearTimeout(timer);
         }
-    }, [isActiveCard, localHintShown, allMedia.length, currentMediaIndex, rightFlashAnim]);
+    }, [computedIsActive, localHintShown, allMedia.length, currentMediaIndex, rightFlashAnim]);
 
     return (
         <Card
@@ -321,7 +329,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, acc
                                     )}
                                     <VideoViewWrapper 
                                         url={currentMedia.url} 
-                                        isActive={isActiveCard} 
+                                        isActive={computedIsActive} 
                                         isMuted={isMuted} 
                                         onReady={() => setMediaLoaded(true)}
                                         onError={handleVideoError}
@@ -709,7 +717,7 @@ const areEqual = (prev: OfferSwipeCardProps, next: OfferSwipeCardProps) => {
         prev.item.prestador?.avatar === next.item.prestador?.avatar &&
         prev.item.localizacao?.cidade === next.item.localizacao?.cidade &&
         prev.accessibilityHint === next.accessibilityHint &&
-        prev.isActiveCard === next.isActiveCard &&
+        prev.index === next.index &&
         prev.isMuted === next.isMuted &&
         prev.onPress === next.onPress
     );

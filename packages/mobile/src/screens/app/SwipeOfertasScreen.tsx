@@ -15,6 +15,7 @@ import SwipeNopeOverlay from '@/components/offers/SwipeNopeOverlay';
 import { useOfertaSwipe } from '@/hooks/useOfertaSwipe';
 import { colors, spacing, radius, layout } from '@/styles/theme';
 import { OFFER_TRANSLATIONS } from '@/constants/translations';
+import { SwiperIndexProvider } from '@/context/SwiperIndexContext';
 
 /**
  * Tela principal de exibição de ofertas no formato de "swipe" (cartões deslizáveis).
@@ -28,6 +29,7 @@ const SwipeOfertasScreen: React.FC = () => {
         error,
         isEmpty,
         currentIndex,
+        resetCount,
         swiperRef,
         handleSwipeRight,
         handleSwipeLeft,
@@ -75,13 +77,13 @@ const SwipeOfertasScreen: React.FC = () => {
         (item: OfertaServico, index: number) => (
             <OfferSwipeCard
                 item={item}
-                isActiveCard={index === currentIndex}
+                index={index}
                 isMuted={isMuted}
                 onToggleMute={toggleMute}
                 onPress={() => navigation.navigate('OfferDetail', { oferta: item })}
             />
         ),
-        [currentIndex, isMuted, toggleMute, navigation]
+        [isMuted, toggleMute, navigation]
     );
     /**
      * Renderiza o overlay de like com callback estável para o Swiper.
@@ -162,19 +164,24 @@ const SwipeOfertasScreen: React.FC = () => {
     return (
         <View style={styles.container}>
             <View style={styles.swiperArea}>
-                <Swiper
-                    ref={swiperRef}
-                    data={ofertas}
-                    renderCard={renderCard}
-                    OverlayLabelRight={renderLikeOverlay}
-                    OverlayLabelLeft={renderNopeOverlay}
-                    onSwipeRight={handleSwipeRight}
-                    onSwipeLeft={handleSwipeLeft}
-                    onSwipedAll={handleSwipedAll}
-                    onIndexChange={setCurrentIndex}
-                    prerenderItems={3}
-                    cardStyle={[styles.cardContainer, { width: cardWidth }]}
-                />
+                <SwiperIndexProvider value={currentIndex}>
+                    <Swiper
+                        key={`swiper-deck-${resetCount}`}
+                        ref={swiperRef}
+                        data={ofertas}
+                        renderCard={renderCard}
+                        OverlayLabelRight={renderLikeOverlay}
+                        OverlayLabelLeft={renderNopeOverlay}
+                        onSwipeRight={handleSwipeRight}
+                        onSwipeLeft={handleSwipeLeft}
+                        onSwipedAll={handleSwipedAll}
+                        onIndexChange={setCurrentIndex}
+                        prerenderItems={5}
+                        initialIndex={currentIndex}
+                        keyExtractor={(item: OfertaServico, index: number) => (item as any)?._id ?? (item as any)?.id ?? index}
+                        cardStyle={[styles.cardContainer, { width: cardWidth }]}
+                    />
+                </SwiperIndexProvider>
             </View>
 
             {/* Barra inferior de ações flutuando no rodapé */}
