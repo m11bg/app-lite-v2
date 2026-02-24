@@ -87,12 +87,12 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, ind
             Animated.timing(anim, {
                 toValue: 1,
                 duration: 100,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             }),
             Animated.timing(anim, {
                 toValue: 0,
                 duration: 300,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             }),
         ]).start();
     }, []);
@@ -122,6 +122,14 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, ind
         // Garante que o card tenha pelo menos 380px de altura para ser minimamente informativo
         return Math.max(380, calculated);
     }, [windowHeight]);
+
+    const effectiveMediaWidth = useMemo(() => {
+        const fallback = Math.min(cardWidth, 600);
+        if (Platform.OS === 'web') {
+            return mediaWidth > 0 ? mediaWidth : fallback;
+        }
+        return mediaWidth || cardWidth;
+    }, [cardWidth, mediaWidth]);
 
     // placeholder: manter referência de fallback quando não houver mídias válidas
     const hasMedia = allMedia.length > 0;
@@ -158,31 +166,40 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, ind
     const handleVideoError = useCallback((err: any) => {
         if (__DEV__) console.warn('Erro ao carregar ou reproduzir vídeo:', err);
         setVideoErrored(true);
+        setMediaLoaded(true);
     }, []);
 
     const onMediaLayout = useCallback((e: LayoutChangeEvent) => {
-        setMediaWidth(e.nativeEvent.layout.width || 0);
-    }, []);
+        const nextWidth = e.nativeEvent.layout.width;
+        if (Number.isFinite(nextWidth) && nextWidth > 0) {
+            setMediaWidth(nextWidth);
+        } else if (mediaWidth === 0) {
+            setMediaWidth(Math.min(cardWidth, 600));
+        }
+    }, [cardWidth, mediaWidth]);
+
+    const handleMutePress = useCallback((event: GestureResponderEvent) => {
+        // Impede que o clique no ícone de som dispare a navegação de mídia (handleMediaPress)
+        if (typeof event.stopPropagation === 'function') {
+            event.stopPropagation();
+        }
+        
+        onToggleMute();
+        triggerFlash(centerFlashAnim);
+        vibrateLight();
+    }, [onToggleMute, triggerFlash, centerFlashAnim]);
 
     const handleMediaPress = useCallback((event: GestureResponderEvent) => {
         mediaNavigationHintDismissed = true; // Marcar como descoberto em qualquer interação com a mídia
 
-        // [SOLUÇÃO: Navegação Web] Impede que o clique na mídia dispare o onPress do Card na web.
-        // Como o Card tinha onPress global, o clique na mídia navegava incorretamente para Detalhes.
-        if (Platform.OS === 'web' && typeof (event as any).stopPropagation === 'function') {
-            (event as any).stopPropagation();
-        }
-
         const x = event.nativeEvent?.locationX ?? 0;
 
-        // [SOLUÇÃO: Largura Web] No web, se o onLayout ainda não deu a medida real (0), 
-        // fazemos um fallback seguro baseado no cardWidth (máximo 600px). 
+        // [SOLUÇÃO: Largura Web] No web, se o onLayout ainda não deu a medida real (0),
+        // fazemos um fallback seguro baseado no cardWidth (máximo 600px).
         // Isso evita que o primeiro clique caia sempre na "área esquerda" por conta de um width=0.
-        const width = Platform.OS === 'web'
-            ? (mediaWidth > 0 ? mediaWidth : Math.min(cardWidth, 600))
-            : (mediaWidth || cardWidth);
+        const width = effectiveMediaWidth;
 
-        if (!Number.isFinite(width) || width <= 0) return;
+        if (!Number.isFinite(width) || width <= 1) return;
 
         const left = width / 3;
         const right = (2 * width) / 3;
@@ -208,13 +225,13 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, ind
         // centro: toggle de som
         onToggleMute();
         triggerFlash(centerFlashAnim);
-    }, [mediaWidth, cardWidth, allMedia.length, currentMediaIndex, triggerFlash, leftFlashAnim, rightFlashAnim, onToggleMute, centerFlashAnim]);
+    }, [effectiveMediaWidth, allMedia.length, currentMediaIndex, triggerFlash, leftFlashAnim, rightFlashAnim, onToggleMute, centerFlashAnim]);
 
     // Resetar mídia quando o card deixar de ser ativo e quando o item mudar
     useEffect(() => {
         if (!computedIsActive) {
             setCurrentMediaIndex(0);
-            setMediaLoaded(false);
+            setMediaLoaded(false); // <--- Importante: reseta o estado visual
             setVideoProgress(0);
             setVideoErrored(false);
         }
@@ -224,14 +241,14 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, ind
         setCurrentMediaIndex(0);
         setImageErrored(false);
         setVideoErrored(false);
-        setMediaLoaded(false);
+        setMediaLoaded(false); // <--- Importante: reseta o estado visual
         setVideoProgress(0);
     }, [item?._id]);
 
     useEffect(() => {
         setImageErrored(false);
         setVideoErrored(false);
-        setMediaLoaded(false);
+        setMediaLoaded(false); // <--- Importante: reseta o estado visual
         setVideoProgress(0);
     }, [currentMediaIndex]);
 
@@ -246,22 +263,22 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, ind
                     Animated.timing(rightFlashAnim, {
                         toValue: 0.5,
                         duration: 600,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                     Animated.timing(rightFlashAnim, {
                         toValue: 0,
                         duration: 600,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                     Animated.timing(rightFlashAnim, {
                         toValue: 0.5,
                         duration: 600,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                     Animated.timing(rightFlashAnim, {
                         toValue: 0,
                         duration: 600,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                 ]).start(() => setLocalHintShown(true));
             }, 2500);
@@ -313,6 +330,18 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, ind
             autoAdvanceTimerRef.current = null;
         }
     }, [currentMediaIndex, computedIsActive]);
+
+    useEffect(() => {
+        if (!videoErrored) return;
+        if (!computedIsActive) return;
+        if (allMedia.length <= 1) return;
+
+        const timer = setTimeout(() => {
+            setCurrentMediaIndex((prev) => (prev + 1) % Math.max(1, allMedia.length));
+        }, 1200);
+
+        return () => clearTimeout(timer);
+    }, [videoErrored, computedIsActive, allMedia.length]);
 
     return (
         <Card
@@ -412,14 +441,20 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, ind
                                         />
                                     </View>
 
-                                    {/* Indicador de status de som no canto para vídeos */}
-                                    <View style={[styles.muteStatusIndicator, { opacity: mediaLoaded ? 1 : 0 }]} pointerEvents="none">
+                                    {/* Indicador de status de som no canto para vídeos - Agora interativo */}
+                                    <Pressable 
+                                        style={[styles.muteStatusIndicator, { opacity: mediaLoaded ? 1 : 0 }]} 
+                                        onPress={handleMutePress}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={isMuted ? strings.ACCESSIBILITY.UNMUTE : strings.ACCESSIBILITY.MUTE}
+                                        testID="mute-indicator-pressable"
+                                    >
                                         <Icon
                                             name={isMuted ? 'volume-off' : 'volume-high'}
                                             size={16}
                                             color="white"
                                         />
-                                    </View>
+                                    </Pressable>
                                 </>
                             )}
                         </View>
@@ -565,41 +600,59 @@ const VideoViewWrapperWeb: React.FC<VideoViewWrapperProps> = ({
     const videoRef = React.useRef<HTMLVideoElement | null>(null);
 
     // [SOLUÇÃO: Som Vídeo Web] Aplica mute dinamicamente e garante play ao desmutar (quando ativo).
-    // Isso contorna políticas de "user gesture" de navegadores; ao clicar no centro da mídia, 
+    // Isso contorna políticas de "user gesture" de navegadores; ao clicar no centro da mídia,
     // forçamos o play com som agora permitido pelo gesto.
     useEffect(() => {
         const el = videoRef.current;
         if (!el) return;
+        
+        // Garantir que os atributos de autoplay e mute estejam sincronizados
+        // Se o card está ativo e não está mutado, tentamos dar play (gesto do usuário)
         el.muted = isMuted;
         try {
             el.volume = isMuted ? 0 : 1;
         } catch {}
+
         if (!isMuted && isActive) {
-            void el.play().catch((err) => {
-                if (__DEV__) console.warn('Falha ao dar play com som (web):', err);
-            });
+            const playPromise = el.play();
+            if (playPromise !== undefined) {
+                playPromise.catch((err) => {
+                    if (__DEV__) console.warn('Falha ao dar play com som (web) no toggle:', err);
+                });
+            }
         }
     }, [isMuted, isActive]);
 
     // [SOLUÇÃO: Autoplay Web] Controla play/pause quando o card vira ativo/inativo.
-    // Como o Swiper pré-renderiza cards (prerenderItems={5}), o atributo autoPlay={isActive} 
-    // pode montar o vídeo como false. Ao virar ativo depois, precisamos disparar .play() explicitamente.
     useEffect(() => {
         const el = videoRef.current;
         if (!el) return;
+
         if (isActive) {
+            // No web, autoplay costuma funcionar se estiver mutado inicialmente.
+            // Se o usuário já interagiu (clicou), o play() com som também funcionará.
             const play = async () => {
                 try {
                     await el.play();
+                    // No web, se conseguimos dar play com sucesso (mesmo mutado), chamamos onReady
+                    if (onReady) onReady();
                 } catch (err) {
-                    if (__DEV__) console.warn('Falha ao dar play no vídeo (web):', err);
+                    if (__DEV__) console.warn('Falha ao dar play no vídeo (web) no isActive:', err);
+                    // Mesmo com erro de autoplay, chamamos onReady se os dados já carregaram
+                    // readyState >= 2 significa HAVE_CURRENT_DATA (pode tocar o frame atual)
+                    if (el.readyState >= 2 && onReady) onReady();
                 }
             };
             void play();
         } else {
             el.pause();
+            if (onProgressUpdate) onProgressUpdate(0);
         }
-    }, [isActive]);
+    }, [isActive, onProgressUpdate, onReady]);
+
+    useEffect(() => {
+        if (!isActive && onProgressUpdate) onProgressUpdate(0);
+    }, [isActive, onProgressUpdate]);
 
     return (
         <View style={styles.image}>
@@ -611,8 +664,19 @@ const VideoViewWrapperWeb: React.FC<VideoViewWrapperProps> = ({
                 autoPlay={isActive}
                 muted={isMuted}
                 playsInline
-                onCanPlay={onReady}
-                onError={onError}
+                onLoadedData={() => {
+                    if (onReady) onReady();
+                }}
+                onLoadedMetadata={() => {
+                    if (onReady) onReady();
+                }}
+                onCanPlay={() => {
+                    if (onReady) onReady();
+                }}
+                onError={(e) => {
+                    if (onError) onError(e);
+                    if (onProgressUpdate) onProgressUpdate(0);
+                }}
                 onTimeUpdate={(e) => {
                     const target = e.currentTarget;
                     if (onProgressUpdate && target.duration > 0) {
@@ -745,10 +809,10 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: spacing.sm,
         right: spacing.sm,
-        zIndex: 20,
+        zIndex: 30, // Aumentado para garantir interatividade sobre outros elementos
         backgroundColor: 'rgba(0, 0, 0, 0.4)',
         borderRadius: radius.full,
-        padding: 6,
+        padding: 8, // Ligeiramente maior para facilitar o toque/clique
     },
     videoIndicator: {
         position: 'absolute',

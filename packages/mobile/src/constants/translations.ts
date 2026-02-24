@@ -21,6 +21,8 @@ export const OFFER_TRANSLATIONS = {
             IMAGE_PREFIX: 'Imagem da oferta',
             PROVIDER_PREFIX: 'Prestador',
             MEDIA_NAV_HINT: 'Toque à esquerda/direita para navegar entre as mídias',
+            MUTE: 'Silenciar som',
+            UNMUTE: 'Ativar som',
         },
     },
     SCREEN: {
