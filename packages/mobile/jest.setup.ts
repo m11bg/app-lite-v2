@@ -87,6 +87,31 @@ if (typeof (globalThis as any).requestAnimationFrame !== 'function') {
     ;(globalThis as any).requestAnimationFrame = (cb: any) => setTimeout(cb, 0);
 }
 
+// Ensure Animated is usable (Value constructible) in tests
+try {
+    const RN = require('react-native');
+    let needsPatch = false;
+    try {
+        if (!RN.Animated) needsPatch = true;
+        else {
+            // Try to instantiate to verify constructibility
+            // @ts-ignore
+            new RN.Animated.Value(0);
+        }
+    } catch {
+        needsPatch = true;
+    }
+    if (needsPatch) {
+        const startObj = { start: (cb?: any) => (typeof cb === 'function' ? cb() : undefined) };
+        RN.Animated = {
+            ...(RN.Animated || {}),
+            Value: function(initial: any){ this._val = initial; this.setValue = (v: any) => { this._val = v; }; },
+            timing: () => startObj,
+            sequence: () => startObj,
+        };
+    }
+} catch {}
+
 // Mock TurboModuleRegistry to avoid SourceCode/DeviceInfo errors
 jest.mock('react-native/Libraries/TurboModule/TurboModuleRegistry', () => ({
     get: jest.fn(),
