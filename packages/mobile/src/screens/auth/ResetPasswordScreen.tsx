@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Button, Text, TextInput, HelperText } from 'react-native-paper';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -37,6 +37,9 @@ type FormData = z.infer<typeof schema>;
  */
 const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
     const prefilledToken = route.params?.token ?? '';
+
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const { control, handleSubmit, formState: { errors, isSubmitting }, setValue } = useForm<FormData>({
         resolver: zodResolver(schema),
@@ -119,7 +122,13 @@ const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
                         value={value}
                         onChangeText={onChange}
                         onBlur={onBlur}
-                        secureTextEntry
+                        secureTextEntry={!showPassword}
+                        right={
+                            <TextInput.Icon
+                                icon={showPassword ? "eye-off" : "eye"}
+                                onPress={() => setShowPassword(!showPassword)}
+                            />
+                        }
                         style={styles.input}
                     />
                 )}
@@ -136,7 +145,13 @@ const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
                         value={value}
                         onChangeText={onChange}
                         onBlur={onBlur}
-                        secureTextEntry
+                        secureTextEntry={!showConfirmPassword}
+                        right={
+                            <TextInput.Icon
+                                icon={showConfirmPassword ? "eye-off" : "eye"}
+                                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                            />
+                        }
                         style={styles.input}
                     />
                 )}

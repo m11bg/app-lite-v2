@@ -20,6 +20,11 @@ import { requestLogger, loggerUtils } from './utils/logger';
 const app: express.Application = express();
 
 /**
+ * Configura o Express para confiar em proxies (necessário para rate limiters na VPS).
+ */
+app.set('trust proxy', 1);
+
+/**
  * Configurações de Segurança.
  * - Desabilita o cabeçalho 'x-powered-by' para dificultar a identificação da tecnologia.
  * - Helmet adiciona diversos cabeçalhos de segurança (HSTS, CSP, etc).

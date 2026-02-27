@@ -12,6 +12,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const { login } = useAuth();
 
@@ -58,7 +59,13 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                         value={password}
                         onChangeText={setPassword}
                         mode="outlined"
-                        secureTextEntry
+                        secureTextEntry={!showPassword}
+                        right={
+                            <TextInput.Icon
+                                icon={showPassword ? "eye-off" : "eye"}
+                                onPress={() => setShowPassword(!showPassword)}
+                            />
+                        }
                         style={styles.input}
                     />
 

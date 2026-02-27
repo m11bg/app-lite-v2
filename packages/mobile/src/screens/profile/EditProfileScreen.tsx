@@ -36,6 +36,7 @@ const EditProfileScreen: React.FC = () => {
   const [isEmailChanged, setIsEmailChanged] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [confirmingToken, setConfirmingToken] = useState(false);
   const [token, setToken] = useState('');
 
@@ -269,7 +270,13 @@ const EditProfileScreen: React.FC = () => {
               label="Senha atual"
               value={currentPassword}
               onChangeText={setCurrentPassword}
-              secureTextEntry
+              secureTextEntry={!showPassword}
+              right={
+                <TextInput.Icon
+                  icon={showPassword ? "eye-off" : "eye"}
+                  onPress={() => setShowPassword(!showPassword)}
+                />
+              }
               mode="outlined"
               autoCapitalize="none"
             />

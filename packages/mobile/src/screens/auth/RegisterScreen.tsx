@@ -93,6 +93,9 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     // Controla se o formulário exibido é para Pessoa Física ou Pessoa Jurídica
     const [tipoPessoa, setTipoPessoa] = useState<'PF' | 'PJ'>('PF');
 
+    // Estado para ocultar/mostrar senha
+    const [showPassword, setShowPassword] = useState(false);
+
     // Inicialização do hook de formulário com validação via Zod
     const {
         control,
@@ -425,7 +428,13 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                                 value={value ?? ''}
                                 onChangeText={onChange}
                                 onBlur={onBlur}
-                                secureTextEntry
+                                secureTextEntry={!showPassword}
+                                right={
+                                    <TextInput.Icon
+                                        icon={showPassword ? "eye-off" : "eye"}
+                                        onPress={() => setShowPassword(!showPassword)}
+                                    />
+                                }
                                 style={styles.input}
                                 error={!!errors.password}
                             />

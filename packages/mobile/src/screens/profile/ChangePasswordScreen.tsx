@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Button, Text, TextInput } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
@@ -16,9 +16,11 @@ const ChangePasswordScreen: React.FC = () => {
     const navigation = useNavigation();
 
     // Estados locais para gerenciar os inputs do formulário e feedback de carregamento
-    const [currentPassword, setCurrentPassword] = React.useState('');
-    const [newPassword, setNewPassword] = React.useState('');
-    const [loading, setLoading] = React.useState(false);
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     /**
      * Lida com a submissão do formulário de alteração de senha.
@@ -72,7 +74,13 @@ const ChangePasswordScreen: React.FC = () => {
                 label="Senha atual"
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
-                secureTextEntry
+                secureTextEntry={!showCurrentPassword}
+                right={
+                    <TextInput.Icon
+                        icon={showCurrentPassword ? "eye-off" : "eye"}
+                        onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+                    />
+                }
                 style={styles.input}
             />
 
@@ -82,7 +90,13 @@ const ChangePasswordScreen: React.FC = () => {
                 label="Nova senha"
                 value={newPassword}
                 onChangeText={setNewPassword}
-                secureTextEntry
+                secureTextEntry={!showNewPassword}
+                right={
+                    <TextInput.Icon
+                        icon={showNewPassword ? "eye-off" : "eye"}
+                        onPress={() => setShowNewPassword(!showNewPassword)}
+                    />
+                }
                 style={styles.input}
             />
 
