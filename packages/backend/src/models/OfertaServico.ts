@@ -13,6 +13,11 @@ export interface IOfertaServico extends Document {
         avatar?: string;
         avaliacao: number;
         tipoPessoa: 'PF' | 'PJ';
+        telefone?: string;
+        localizacao?: {
+            cidade: string;
+            estado: string;
+        };
     };
     // ⚠️ SIMPLIFICADO: Apenas array de strings (URLs)
     imagens: string[];
@@ -123,6 +128,11 @@ const OfertaServicoSchema = new Schema<IOfertaServico>({
             type: String,
             enum: ['PF', 'PJ'],
             default: 'PF'
+        },
+        telefone: String,
+        localizacao: {
+            cidade: String,
+            estado: String
         }
     },
 

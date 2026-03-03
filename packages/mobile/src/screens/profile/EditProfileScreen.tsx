@@ -182,6 +182,21 @@ const EditProfileScreen: React.FC = () => {
                 Use apenas letras e espaços, entre 3 e 50 caracteres. Removemos espaços duplicados automaticamente.
               </Text>
 
+              <TextInput
+                label="Telefone"
+                value={telefone}
+                mode="outlined"
+                onChangeText={(text) => setTelefone(formatPhoneNumber(text))}
+                style={styles.input}
+                error={!!telefone && !isPhoneValid}
+                keyboardType="phone-pad"
+                placeholder="(00) 00000-0000"
+                right={telefone && isPhoneValid ? <TextInput.Icon icon="check-circle" color={colors.primary} /> : undefined}
+              />
+              <Text variant="bodySmall" style={styles.helperText}>
+                Informe um número de celular ou fixo com DDD.
+              </Text>
+
               <View style={styles.row}>
                 <TextInput
                   label="Cidade"

@@ -14,6 +14,7 @@ import sessionStore from '@/state/session/sessionStore';
 import ProfileHighlights from '@/components/profile/highlights/ProfileHighlights';
 import type { Badge, Interest } from '@/components/profile/highlights/types';
 import { useAuth } from '@/context/AuthContext';
+import { userToPrestadorResumo } from '@/types/profilePreview';
 
 /**
  * Interface que define as propriedades aceitas pelo componente UserProfileView.
@@ -68,13 +69,16 @@ const UserProfileView: React.FC<Props> = ({ isLoading, showSkeleton }) => {
     }
   }, [shouldShowChecklist, checklistImpressionSent, user, completion]);
 
+  // Converte o usuário para o formato PrestadorResumo esperado pelo ProfileHeader
+  const prestadorResumo = React.useMemo(() => (user ? userToPrestadorResumo(user) : null), [user]);
+
   return (
     <View style={styles.container}>
       {/* Renderiza o esqueleto de carregamento ou o cabeçalho real do perfil */}
       {isLoading && showSkeleton ? (
         <ProfileHeaderSkeleton />
       ) : (
-        <ProfileHeader user={user} profileId={(user as any)?.id ?? 'unknown'} />
+        <ProfileHeader user={prestadorResumo} profileId={user?.id ?? 'unknown'} />
       )}
 
       <ScrollView

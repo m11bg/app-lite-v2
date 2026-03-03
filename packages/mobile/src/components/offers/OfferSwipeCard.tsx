@@ -12,6 +12,9 @@ import { colors, spacing, radius, layout } from '@/styles/theme';
 import { SkeletonBox } from '@/components/profile/skeletons/SkeletonPrimitives';
 import { OFFER_TRANSLATIONS } from '@/constants/translations';
 import { useSwiperIndex } from '@/context/SwiperIndexContext';
+import { useProfilePreviewActions } from '@/context/ProfilePreviewContext';
+import { toPrestadorResumo, userToPrestadorResumo } from '@/types/profilePreview';
+import { useAuth } from '@/context/AuthContext';
 
 interface OfferSwipeCardProps {
     item: OfertaServico;
@@ -50,6 +53,8 @@ let mediaNavigationHintDismissed = false;
  */
 const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, index, accessibilityHint, isMuted: propsMuted, onToggleMute: propsToggleMute, onPress }) => {
     const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+    const { showProfile } = useProfilePreviewActions();
+    const { user: currentUser } = useAuth();
     const [imageErrored, setImageErrored] = useState(false);
     const [videoErrored, setVideoErrored] = useState(false);
     const [mediaLoaded, setMediaLoaded] = useState(false);
@@ -539,11 +544,26 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, ind
                 </View>
 
                 <View style={styles.footerSection}>
-                    <View
+                    <Pressable
                         style={styles.prestadorInfo}
+                        onPress={(e) => {
+                            // Previne que o clique dispare o onPress do card pai
+                            if (typeof e?.stopPropagation === 'function') e.stopPropagation();
+                            
+                            // Se o prestador da oferta for o usuário logado, utiliza os dados mais recentes do AuthContext
+                            // Caso contrário, utiliza os dados denormalizados da oferta com fallback para a localização da própria oferta
+                            const prestadorId = item.prestador.id || item.prestador._id;
+                            const isMe = currentUser && (currentUser.id === prestadorId);
+                            
+                            const res = isMe 
+                                ? userToPrestadorResumo(currentUser) 
+                                : toPrestadorResumo(item.prestador, item.localizacao);
+                                
+                            showProfile(res);
+                        }}
                         accessible
                         accessibilityLabel={accessibilityPrestadorLabel}
-                        accessibilityRole="text"
+                        accessibilityRole="button"
                     >
                         {avatarUri ? (
                             <Avatar.Image
@@ -568,7 +588,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, ind
                                 {cidade}
                             </Text>
                         </View>
-                    </View>
+                    </Pressable>
 
                     <View style={styles.priceContainer} accessibilityLabel={accessibilityPriceLabel} accessibilityRole="text">
                         <Text variant="titleLarge" style={styles.price} numberOfLines={1} ellipsizeMode="tail">

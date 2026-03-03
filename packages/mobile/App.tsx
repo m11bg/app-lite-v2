@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import RootNavigator from './src/navigation/RootNavigator';
 import { GlobalDialog } from './src/components/common/GlobalDialog';
 import { AuthProvider } from '@/context/AuthContext';
+import { ProfilePreviewProvider } from '@/context/ProfilePreviewContext';
 // import { lightTheme, darkTheme } from '@/styles/theme';
 import { lightTheme } from '@/styles/theme';
 import { navigationRef } from '@/navigation/RootNavigation';
@@ -44,16 +45,18 @@ const App: React.FC = () => {
     }, []);
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
-            <PaperProvider theme={paperTheme}>
-                <SafeAreaProvider>
-                    <AuthProvider>
+            <SafeAreaProvider>
+                <AuthProvider>
+                    <PaperProvider theme={paperTheme}>
                         <NavigationContainer theme={navigationTheme} ref={navigationRef} linking={linking}>
-                            <RootNavigator />
+                            <ProfilePreviewProvider>
+                                <RootNavigator />
+                            </ProfilePreviewProvider>
                         </NavigationContainer>
                         <GlobalDialog />
-                    </AuthProvider>
-                </SafeAreaProvider>
-            </PaperProvider>
+                    </PaperProvider>
+                </AuthProvider>
+            </SafeAreaProvider>
         </GestureHandlerRootView>
     );
 };

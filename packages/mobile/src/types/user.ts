@@ -27,6 +27,7 @@ export interface User {
     razaoSocial?: string;
     nomeFantasia?: string;
     ativo: boolean;
+    verified?: boolean; // Adicionado para suportar badges no perfil
 }
 
 export interface PendingRedirect {

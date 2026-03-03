@@ -71,8 +71,8 @@ export type OfertasStackParamList = {
  * Define os parâmetros das rotas para a pilha de navegação do Perfil.
  */
 export type ProfileStackParamList = {
-    /** Tela inicial do perfil com informações do usuário */
-    ProfileHome: undefined;
+    /** Tela inicial do perfil com informações do usuário ou de outro prestador */
+    ProfileHome: { userId?: string } | undefined;
     /** Tela de configurações gerais da conta/aplicativo */
     Settings: undefined;
     /** Tela de gerenciamento e visualização de notificações */

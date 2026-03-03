@@ -8,13 +8,15 @@ import ProfileTabs from '@/components/profile/ProfileTabs';
 import { ACHIEVEMENTS_MOCK } from '@/mocks/achievements.mock';
 import { Achievement } from '@/types/achievements';
 import { spacing } from '@/styles/theme';
+import { PrestadorResumo } from '@/types/profilePreview';
 
 // Mock user data
-const USER_MOCK = {
+const USER_MOCK: PrestadorResumo = {
   id: '1',
   nome: 'Jane Doe',
   avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d',
   verified: true,
+  avaliacao: 5.0,
 };
 
 const ProfileScreen: React.FC = () => {

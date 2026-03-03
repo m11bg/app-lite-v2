@@ -13,6 +13,11 @@ export interface OfertaServico {
         nome: string;
         avatar?: string;
         avaliacao: number;
+        telefone?: string;
+        localizacao?: {
+            cidade: string;
+            estado: string;
+        };
     };
     imagens: string[]; // IMPORTANTE: é 'imagens', não 'imagem'
     videos?: string[]; // URLs de vídeos (MP4) no GridFS

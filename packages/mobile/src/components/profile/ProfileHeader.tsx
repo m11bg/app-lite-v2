@@ -7,7 +7,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Kpi from './Kpi';
 import AnalyticsService from '@/services/AnalyticsService';
 import ProfileMoreMenu from './ProfileMoreMenu';
-import { useNavigation } from '@react-navigation/native';
+import { navigationRef } from '@/navigation/RootNavigation';
+import { PrestadorResumo } from '@/types/profilePreview';
 
 import OptimizedImage from '@/components/common/OptimizedImage';
 
@@ -16,9 +17,11 @@ import OptimizedImage from '@/components/common/OptimizedImage';
  */
 interface ProfileHeaderProps {
   /** Objeto contendo os dados do usuário a serem exibidos. Pode ser nulo durante o carregamento. */
-  user: any | null;
+  user: PrestadorResumo | null;
   /** Identificador único do perfil utilizado para gerar URLs e rastreamento. */
   profileId: string;
+  /** Se o componente deve exibir o modo de pré-visualização (contato) ou perfil completo (botão editar) */
+  isPreview?: boolean;
 }
 
 /**
@@ -31,9 +34,9 @@ interface ProfileHeaderProps {
  * @param {ProfileHeaderProps} props - Propriedades do componente.
  * @returns {JSX.Element} Cabeçalho estilizado do perfil.
  */
-const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, profileId }) => {
-  /** Hook de navegação do React Navigation */
-  const navigation = useNavigation();
+const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, profileId, isPreview = false }) => {
+  /** Hook de navegação do React Navigation via referência global */
+  const navigation = navigationRef;
   
   /** Estado que controla a exibição do menu de opções extras */
   const [menuVisible, setMenuVisible] = useState(false);
@@ -97,24 +100,45 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, profileId }) => {
 
       {/* Seção de Métricas (KPIs): Exibição de estatísticas do perfil */}
       <View style={styles.metrics}>
-        <Kpi label="Avaliações" value="4.8" />
+        <Kpi label="Avaliações" value={user?.avaliacao?.toFixed(1) ?? '0.0'} />
         <Kpi label="Seguidores" value="1.2k" />
         <Kpi label="Pedidos" value="320" />
       </View>
 
-      {/* Seção de Ações: Botão principal de edição e menu de opções adicionais */}
+      {/* Seção de Ações: Botão de edição para perfil completo ou informações de contato para pré-visualização */}
       <View style={styles.actionsContainer}>
-        <Button
-          mode="contained"
-          onPress={() => {
-            // Log de evento para análise de comportamento do usuário
-            AnalyticsService.track('profile_edit_click');
-            // Navegação para a tela de edição de perfil Versão 2.0
-            (navigation as any).navigate('EditProfile');
-          }}
-        >
-          Editar Perfil
-        </Button>
+        {isPreview ? (
+          <View style={styles.contactInfo}>
+            <View style={styles.infoRow}>
+              <MaterialCommunityIcons name="phone" size={16} color={colors.primary} />
+              <Text variant="bodyMedium" style={styles.infoText}>
+                {user?.telefone || 'Telefone não disponível'}
+              </Text>
+            </View>
+            <View style={styles.infoRow}>
+              <MaterialCommunityIcons name="map-marker" size={16} color={colors.primary} />
+              <Text variant="bodyMedium" style={styles.infoText}>
+                {user?.localizacao 
+                  ? `${user.localizacao.cidade} - ${user.localizacao.estado}` 
+                  : 'Localização não informada'}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <Button
+            mode="contained"
+            onPress={() => {
+              // Log de evento para análise de comportamento do usuário
+              AnalyticsService.track('profile_edit_click');
+              // Navegação para a tela de edição de perfil Versão 2.0
+              if (navigation.isReady()) {
+                (navigation as any).navigate('Perfil', { screen: 'EditProfile' });
+              }
+            }}
+          >
+            Editar Perfil
+          </Button>
+        )}
         
         {/* Menu suspenso com opções de compartilhamento, denúncia, etc. */}
         <ProfileMoreMenu
@@ -134,7 +158,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, profileId }) => {
             />
           }
           onNavigateSettings={() => {
-            navigation.navigate('Settings' as never);
+            if (navigation.isReady()) {
+              (navigation as any).navigate('Perfil', { screen: 'Settings' });
+            }
           }}
         />
       </View>
@@ -221,6 +247,23 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  contactInfo: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 4,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoText: {
+    marginLeft: spacing.xs,
+    color: colors.textSecondary,
+    fontSize: 14,
   },
 });
 

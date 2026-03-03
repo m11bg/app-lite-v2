@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, StyleSheet, Text as RNText } from 'react-native';
+import { View, StyleSheet, Text as RNText, TouchableOpacity } from 'react-native';
 import { Card, Text, Chip } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -11,6 +11,9 @@ import { formatCurrencyBRL } from '@/utils/currency';
 import { trackCardClick } from '@/utils/analytics';
 import { toAbsoluteMediaUrl } from '@/utils/mediaUrl';
 import { colors, spacing, elevation, radius } from '@/styles/theme';
+import { useProfilePreviewActions } from '@/context/ProfilePreviewContext';
+import { toPrestadorResumo, userToPrestadorResumo } from '@/types/profilePreview';
+import { useAuth } from '@/context/AuthContext';
 
 /**
  * Propriedades para o componente OfferCard.
@@ -62,6 +65,8 @@ export const buildOfferCardA11y = (
  */
 export const OfferCard = React.memo(({ item, onPress }: OfferCardProps) => {
     const navigation = useNavigation<NativeStackNavigationProp<OfertasStackParamList>>();
+    const { showProfile } = useProfilePreviewActions();
+    const { user: currentUser } = useAuth();
 
     // Formatação defensiva para evitar quebras em tempo de execução devido a campos inesperados ou nulos
     // Garante que 'preco' seja sempre um número válido
@@ -196,8 +201,26 @@ export const OfferCard = React.memo(({ item, onPress }: OfferCardProps) => {
 
                 {/* Rodapé do Card: Informações do Prestador, Avaliação e Localização */}
                 <View style={styles.cardFooter}>
-                    <Icon name="account" size={16} color={colors.textSecondary} />
-                    <Text style={styles.footerText}>{prestadorNome}</Text>
+                    <TouchableOpacity 
+                        style={styles.prestadorArea}
+                        onPress={() => {
+                            // Se o prestador da oferta for o usuário logado, utiliza os dados mais recentes do AuthContext
+                            // Caso contrário, utiliza os dados denormalizados da oferta com fallback para a localização da própria oferta
+                            const prestadorId = item.prestador.id || item.prestador._id;
+                            const isMe = currentUser && (currentUser.id === prestadorId);
+                            
+                            const res = isMe 
+                                ? userToPrestadorResumo(currentUser) 
+                                : toPrestadorResumo(item.prestador, item.localizacao);
+                                
+                            showProfile(res);
+                        }}
+                    >
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Icon name="account" size={16} color={colors.textSecondary} />
+                            <Text style={styles.footerText}>{prestadorNome}</Text>
+                        </View>
+                    </TouchableOpacity>
                     
                     <RNText style={styles.separator}> • </RNText>
                     
@@ -283,6 +306,12 @@ const styles = StyleSheet.create({
         marginLeft: spacing.xs,
         color: colors.textSecondary,
         fontSize: 12,
+    },
+    prestadorArea: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 4,
+        paddingRight: 4,
     },
     categoryChip: {
         alignSelf: 'flex-start',
