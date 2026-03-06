@@ -214,8 +214,6 @@ const SwipeOfertasScreen: React.FC = () => {
                 {/* Botão para desfazer o último movimento */}
                 <TouchableOpacity
                     onPress={() => {
-                        // Na Web, o onPress (onClick) funciona melhor que onPressIn se não houver conflitos de foco.
-                        // O problema de "clique duplo" foi corrigido pelo setTimeout no hook.
                         if (currentIndex > 0) {
                             handleUndo();
                         }

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef, type RefObject, type Dispatch, type SetStateAction } from 'react';
-import { Platform } from 'react-native';
 import { vibrateLight } from '@/utils/haptics';
 import { type SwiperCardRefType } from 'rn-swiper-list';
 import { Image } from 'expo-image';
@@ -398,16 +397,12 @@ export const useOfertaSwipe = (): UseOfertaSwipeReturn => {
         if (!swiper || ofertas.length === 0) return;
 
         try {
-            // Executa a animação de voltar carta
-            // Na Web, um pequeno delay via setTimeout garante que o swipeBack
-            // ocorra de forma assíncrona, resolvendo conflitos de eventos.
-            if (Platform.OS === 'web') {
-                setTimeout(() => {
-                    swiper.swipeBack();
-                }, 50);
-            } else {
+            // Adia o swipeBack para o próximo frame de renderização via requestAnimationFrame.
+            // Isso coordena a animação com o ciclo de renderização do browser/native,
+            // evitando conflitos de eventos e garantindo sincronização com a atualização de estado.
+            requestAnimationFrame(() => {
                 swiper.swipeBack();
-            }
+            });
 
             vibrateLight();
 
