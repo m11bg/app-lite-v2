@@ -397,17 +397,17 @@ export const useOfertaSwipe = (): UseOfertaSwipeReturn => {
         if (!swiper || ofertas.length === 0) return;
 
         try {
-            // Adia o swipeBack para o próximo frame de renderização via requestAnimationFrame.
-            // Isso coordena a animação com o ciclo de renderização do browser/native,
-            // evitando conflitos de eventos e garantindo sincronização com a atualização de estado.
-            requestAnimationFrame(() => {
-                swiper.swipeBack();
-            });
+            // Invoca swipeBack diretamente sem atrasar em requestAnimationFrame,
+            // evitando conflito com o ciclo de gestos do rn-swiper-list no Web.
+            swiper.swipeBack();
 
             vibrateLight();
 
-            // Atualiza o estado local
-            setCurrentIndex(prev => Math.max(0, prev - 1));
+            // Adia a atualização de estado para uma microtarefa posterior ao frame atual,
+            // evitando que o re-render do React interrompa a animação interna da biblioteca.
+            queueMicrotask(() => {
+                setCurrentIndex(prev => Math.max(0, prev - 1));
+            });
         } catch (err) {
             if (__DEV__) console.warn('Aviso ao desfazer swipe:', err);
             // Em caso de erro, garantimos que pelo menos o estado tente sincronizar

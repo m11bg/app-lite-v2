@@ -107,6 +107,22 @@ const SwipeOfertasScreen: React.FC = () => {
      */
     const renderSkipOverlay = useCallback(() => <SwipeSkipOverlay />, []);
 
+    // Handlers estáveis para os botões de ação — evitam criação de closures inline repetidas
+    const handleDislikePress = useCallback(() => {
+        vibrateLight();
+        swiperRef.current?.swipeLeft();
+    }, [swiperRef]);
+
+    const handleSkipPress = useCallback(() => {
+        vibrateLight();
+        swiperRef.current?.swipeTop();
+    }, [swiperRef]);
+
+    const handleLikePress = useCallback(() => {
+        vibrateLight();
+        swiperRef.current?.swipeRight();
+    }, [swiperRef]);
+
     // Exibe esqueleto de carregamento enquanto busca dados iniciais
     if (isInitialLoading && ofertas.length === 0) {
         return (
@@ -195,17 +211,19 @@ const SwipeOfertasScreen: React.FC = () => {
             </View>
 
             {/* Barra inferior de ações flutuando no rodapé */}
-            <View style={[styles.actionsContainer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+            {/* pointerEvents="box-none" evita que o container bloqueie toques no Swiper abaixo dele */}
+            <View
+                style={[styles.actionsContainer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}
+                pointerEvents="box-none"
+            >
                 {/* Botão para descartar a oferta (Swipe Left) */}
                 <IconButton
                     icon="close"
                     size={40}
                     iconColor={colors.error}
                     mode="outlined"
-                    onPress={() => {
-                        vibrateLight();
-                        swiperRef.current?.swipeLeft();
-                    }}
+                    onPressIn={Platform.OS === 'web' ? handleDislikePress : undefined}
+                    onPress={Platform.OS !== 'web' ? handleDislikePress : undefined}
                     style={styles.actionButton}
                     hitSlop={10}
                     accessibilityLabel={OFFER_TRANSLATIONS.ACTIONS.DISLIKE}
@@ -213,11 +231,8 @@ const SwipeOfertasScreen: React.FC = () => {
 
                 {/* Botão para desfazer o último movimento */}
                 <TouchableOpacity
-                    onPress={() => {
-                        if (currentIndex > 0) {
-                            handleUndo();
-                        }
-                    }}
+                    onPressIn={Platform.OS === 'web' ? handleUndo : undefined}
+                    onPress={Platform.OS !== 'web' ? handleUndo : undefined}
                     disabled={currentIndex === 0}
                     style={[
                         styles.undoButton,
@@ -247,10 +262,8 @@ const SwipeOfertasScreen: React.FC = () => {
                     size={40}
                     iconColor={colors.primary}
                     mode="outlined"
-                    onPress={() => {
-                        vibrateLight();
-                        swiperRef.current?.swipeTop();
-                    }}
+                    onPressIn={Platform.OS === 'web' ? handleSkipPress : undefined}
+                    onPress={Platform.OS !== 'web' ? handleSkipPress : undefined}
                     style={styles.actionButton}
                     hitSlop={10}
                     accessibilityLabel={OFFER_TRANSLATIONS.ACTIONS.SKIP}
@@ -262,10 +275,8 @@ const SwipeOfertasScreen: React.FC = () => {
                     size={40}
                     iconColor={colors.success}
                     mode="outlined"
-                    onPress={() => {
-                        vibrateLight();
-                        swiperRef.current?.swipeRight();
-                    }}
+                    onPressIn={Platform.OS === 'web' ? handleLikePress : undefined}
+                    onPress={Platform.OS !== 'web' ? handleLikePress : undefined}
                     style={styles.actionButton}
                     hitSlop={10}
                     accessibilityLabel={OFFER_TRANSLATIONS.ACTIONS.LIKE}
