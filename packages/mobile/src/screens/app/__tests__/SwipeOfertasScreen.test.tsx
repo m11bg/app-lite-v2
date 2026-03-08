@@ -1,18 +1,20 @@
 
-// Ensure react-native StyleSheet.flatten exists before any imports use it
-jest.mock('react-native', () => {
-    const RN = jest.requireActual('react-native');
-    const flatten = (s: any) => (Array.isArray(s) ? Object.assign({}, ...s) : s);
-    return { ...RN, StyleSheet: { ...RN.StyleSheet, flatten } };
-});
-
 import React from 'react';
+import * as RN from 'react-native';
+
+// Polyfill StyleSheet.flatten early
+if (RN.StyleSheet && typeof RN.StyleSheet.flatten !== 'function') {
+    (RN.StyleSheet as any).flatten = (s: any) => (Array.isArray(s) ? Object.assign({}, ...s) : s);
+}
+
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import SwipeOfertasScreen from '../SwipeOfertasScreen';
 import { ofertaService } from '@/services/ofertaService';
 import { interactionService } from '@/services/interactionService';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
+import { OFFER_TRANSLATIONS } from '@/constants/translations';
+import { colors } from '@/styles/theme';
 
 // Mocks de serviços e contexto
 jest.mock('@/services/ofertaService');
@@ -20,7 +22,6 @@ jest.mock('@/services/interactionService');
 jest.mock('@/context/AuthContext');
 jest.mock('@react-navigation/native');
 jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => 'Icon');
-
 
 // Mock de subcomponentes para isolar o SwipeOfertasScreen
 jest.mock('react-native-paper', () => {
@@ -55,13 +56,23 @@ jest.mock('@/components/offers/OfferSwipeCard', () => {
     const React = require('react');
     const { Text, View } = require('react-native');
     return ({ item }: any) => (
-        <View>
+        <View testID="offer-swipe-card">
             <Text>{item?.titulo}</Text>
         </View>
     );
 });
+jest.mock('@/components/offers/OfferSwipeCardSkeleton', () => {
+    const React = require('react');
+    const { View, Text } = require('react-native');
+    return () => <View testID="offer-swipe-card-skeleton"><Text>Loading Skeleton...</Text></View>;
+});
 jest.mock('@/components/offers/SwipeLikeOverlay', () => 'SwipeLikeOverlay');
 jest.mock('@/components/offers/SwipeNopeOverlay', () => 'SwipeNopeOverlay');
+jest.mock('@/components/offers/SwipeSkipOverlay', () => 'SwipeSkipOverlay');
+jest.mock('@/context/ProfilePreviewContext', () => ({
+    ProfilePreviewProvider: ({ children }: any) => children,
+    useProfilePreview: () => ({}),
+}));
 
 // Mock do Swiper
 const mockSwipeLeft = jest.fn();
@@ -129,7 +140,7 @@ describe('SwipeOfertasScreen', () => {
 
         const { queryByText, debug } = render(<SwipeOfertasScreen />);
         debug();
-        expect(queryByText('Carregando ofertas...')).not.toBeNull();
+        expect(queryByText(OFFER_TRANSLATIONS.SCREEN.LOADING)).not.toBeNull();
         
         await act(async () => {
             resolvePromise({
@@ -145,7 +156,7 @@ describe('SwipeOfertasScreen', () => {
         const { getByText, queryByText } = render(<SwipeOfertasScreen />);
 
         await waitFor(() => {
-            expect(queryByText('Carregando ofertas...')).toBeNull();
+            expect(queryByText(OFFER_TRANSLATIONS.SCREEN.LOADING)).toBeNull();
         });
 
         expect(getByText('Oferta 1')).toBeTruthy();
@@ -163,10 +174,10 @@ describe('SwipeOfertasScreen', () => {
         const { getByText, getByLabelText } = render(<SwipeOfertasScreen />);
 
         await waitFor(() => {
-            expect(getByText('Sem mais ofertas')).toBeTruthy();
+            expect(getByText(OFFER_TRANSLATIONS.SCREEN.EMPTY_TITLE)).toBeTruthy();
         });
 
-        const refreshButton = getByLabelText('Atualizar ofertas');
+        const refreshButton = getByLabelText(OFFER_TRANSLATIONS.SCREEN.REFRESH_BUTTON);
         fireEvent.press(refreshButton);
 
         expect(ofertaService.getOfertas).toHaveBeenCalledTimes(2);
@@ -182,7 +193,7 @@ describe('SwipeOfertasScreen', () => {
         const HeaderRight = mockSetOptions.mock.calls[0][0].headerRight;
         const { getByLabelText } = render(<HeaderRight />);
         
-        fireEvent.press(getByLabelText('Mudar para lista'));
+        fireEvent.press(getByLabelText(OFFER_TRANSLATIONS.ACTIONS.SWITCH_TO_LIST));
         expect(mockNavigate).toHaveBeenCalledWith('BuscarOfertas');
     });
 
@@ -220,15 +231,41 @@ describe('SwipeOfertasScreen', () => {
         expect(interactionService.dislikeOffer).toHaveBeenCalledWith('2');
     });
 
-    it('deve chamar swipeBack ao clicar no botão desfazer', async () => {
+    it('deve chamar swipeBack ao clicar no botão desfazer quando houver swipes anteriores', async () => {
+        const { getByLabelText, getByTestId } = render(<SwipeOfertasScreen />);
+
+        await waitFor(() => {
+            expect(ofertaService.getOfertas).toHaveBeenCalled();
+        });
+
+        // Verificar estado inicial (desabilitado quando index 0)
+        const undoButton = getByLabelText(OFFER_TRANSLATIONS.ACTIONS.UNDO);
+        expect(undoButton.props.disabled).toBe(true);
+        
+        // Simular um swipe para a direita para avançar o índice
+        const swiper = getByTestId('mock-swiper');
+        const { onSwipeRight } = swiper.props['data-props'];
+        await act(async () => {
+            onSwipeRight(0);
+        });
+
+        // Agora o botão deve estar habilitado
+        expect(undoButton.props.disabled).toBe(false);
+
+        fireEvent.press(undoButton);
+        expect(mockSwipeBack).toHaveBeenCalled();
+    });
+
+    it('deve ter o ícone "arrow-down" e modo "outlined" no botão desfazer', async () => {
         const { getByLabelText } = render(<SwipeOfertasScreen />);
 
         await waitFor(() => {
             expect(ofertaService.getOfertas).toHaveBeenCalled();
         });
 
-        fireEvent.press(getByLabelText('Desfazer último swipe'));
-        expect(mockSwipeBack).toHaveBeenCalled();
+        const undoButton = getByLabelText(OFFER_TRANSLATIONS.ACTIONS.UNDO);
+        expect(undoButton.props.icon).toBe('arrow-down');
+        expect(undoButton.props.mode).toBe('outlined');
     });
 
     it('deve carregar a próxima página ao atingir o threshold', async () => {
@@ -272,7 +309,7 @@ describe('SwipeOfertasScreen', () => {
             expect(getByText('Erro ao carregar ofertas: Erro de conexão')).toBeTruthy();
         });
 
-        const retryButton = getByText('Tentar novamente');
+        const retryButton = getByText(OFFER_TRANSLATIONS.SCREEN.RETRY_LABEL);
         
         (ofertaService.getOfertas as jest.Mock).mockResolvedValue({
             ofertas: mockOfertas,
