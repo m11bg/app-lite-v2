@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, useWindowDimensions, Platform, GestureResponderEvent, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, useWindowDimensions, Platform } from 'react-native';
 import { vibrateLight } from '@/utils/haptics';
 import { Text, Button, Snackbar, IconButton } from 'react-native-paper';
 import { Swiper } from 'rn-swiper-list';
@@ -230,31 +230,21 @@ const SwipeOfertasScreen: React.FC = () => {
                 />
 
                 {/* Botão para desfazer o último movimento */}
-                <TouchableOpacity
+                <IconButton
+                    icon="arrow-down"
+                    size={40}
+                    iconColor={colors.primary}
+                    mode="outlined"
                     onPressIn={Platform.OS === 'web' ? handleUndo : undefined}
                     onPress={Platform.OS !== 'web' ? handleUndo : undefined}
                     disabled={currentIndex === 0}
                     style={[
-                        styles.undoButton,
-                        {
-                            width: 40,
-                            height: 40,
-                            borderRadius: 20,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            borderWidth: 1,
-                            borderColor: colors.outlineVariant,
-                            zIndex: 2000,
-                        },
+                        styles.actionButton,
                         currentIndex === 0 && { opacity: 0.5 }
                     ]}
-                    // hitSlop generoso para facilitar o toque
-                    hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+                    hitSlop={10}
                     accessibilityLabel={OFFER_TRANSLATIONS.ACTIONS.UNDO}
-                    accessibilityRole="button"
-                >
-                    <Icon name="undo" size={24} color={colors.onSurfaceVariant} />
-                </TouchableOpacity>
+                />
 
                 {/* Botão para pular a oferta (Swipe Top) - Centralizado */}
                 <IconButton
@@ -377,10 +367,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.surface,
         elevation: 2,
     },
-    undoButton: {
-        backgroundColor: colors.surface,
-        elevation: 1,
-    },
+
     swiperArea: {
         flex: 1,
         width: '100%',
