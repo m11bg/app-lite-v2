@@ -23,7 +23,7 @@ module.exports = function (api) {
             // Na web, o plugin de worklets não é necessário pois tudo roda na mesma thread JS.
             // O Reanimated 4 suporta web sem o plugin de worklets, desde que os hooks
             // recebam arrays de dependências explícitos (o que a rn-swiper-list já faz internamente).
-            ...(!isTest ? ['react-native-reanimated/plugin'] : []),
+            ...(!isTest && !isWeb ? ['react-native-reanimated/plugin'] : []),
         ]
     };
 };
