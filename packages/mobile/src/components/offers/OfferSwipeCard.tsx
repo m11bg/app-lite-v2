@@ -411,6 +411,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, ind
                                 <>
                                     <Image
                                         source={{ uri: FALLBACK_IMAGE }}
+                                        placeholder={PLACEHOLDER_BLURHASH}
                                         style={styles.image}
                                         contentFit="cover"
                                     />
@@ -475,6 +476,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, ind
                             )}
                             <Image
                                 source={{ uri: imageErrored ? FALLBACK_IMAGE : currentMedia.url }}
+                                placeholder={PLACEHOLDER_BLURHASH}
                                 style={styles.image}
                                 contentFit="cover"
                                 transition={300}
@@ -489,6 +491,7 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, ind
                     <View style={styles.image}>
                         <Image
                             source={{ uri: FALLBACK_IMAGE }}
+                            placeholder={PLACEHOLDER_BLURHASH}
                             style={styles.image}
                             contentFit="cover"
                             transition={300}
