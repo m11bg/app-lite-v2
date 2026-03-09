@@ -136,9 +136,6 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, ind
         return mediaWidth || cardWidth;
     }, [cardWidth, mediaWidth]);
 
-    // placeholder: manter referência de fallback quando não houver mídias válidas
-    const hasMedia = allMedia.length > 0;
-
     const precoNumber = typeof item?.preco === 'number' ? item.preco : Number(item?.preco ?? 0);
     const safePrice = Number.isFinite(precoNumber) && precoNumber >= 0 ? precoNumber : 0;
 
