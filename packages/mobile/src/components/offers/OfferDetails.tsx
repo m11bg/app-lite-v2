@@ -40,7 +40,6 @@ export const OfferDetails: React.FC<OfferDetailsProps> = ({
         <Pressable
             style={styles.contentContainer}
             onPress={onPress}
-            accessibilityRole="button"
             testID="card-content-pressable"
         >
             <View style={styles.headerSection}>

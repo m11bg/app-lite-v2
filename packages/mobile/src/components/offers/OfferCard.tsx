@@ -49,7 +49,6 @@ export const buildOfferCardA11y = (
     estado: string,
     distancia?: string,
 ) => ({
-    accessibilityRole: 'button' as const,
     accessibilityLabel: `Oferta: ${item.titulo}. Preço ${precoFmt}. Prestador ${item?.prestador?.nome ?? 'Prestador'}. Avaliação ${avaliacao.toFixed(1)}. Localização ${cidade}, ${estado}${distancia ? ' • ' + distancia : ''}.`,
     accessibilityHint: 'Abre os detalhes da oferta',
 });

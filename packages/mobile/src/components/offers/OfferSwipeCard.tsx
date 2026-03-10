@@ -157,7 +157,6 @@ const OfferSwipeCard: React.FC<OfferSwipeCardProps> = ({ item, isActiveCard, ind
             style={[styles.card, { width: cardWidth, maxHeight: cardMaxHeight }]}
             mode="elevated"
             accessible
-            accessibilityRole="button"
             accessibilityLabel={`Oferta: ${titulo} em ${cidade}`}
             accessibilityHint={accessibilityHint || strings.ACCESSIBILITY.HINT}
             testID="offer-swipe-card"
