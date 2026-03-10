@@ -213,8 +213,7 @@ const SwipeOfertasScreen: React.FC = () => {
             {/* Barra inferior de ações flutuando no rodapé */}
             {/* pointerEvents="box-none" evita que o container bloqueie toques no Swiper abaixo dele */}
             <View
-                style={[styles.actionsContainer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}
-                pointerEvents="box-none"
+                style={[styles.actionsContainer, { paddingBottom: Math.max(insets.bottom, spacing.md), pointerEvents: 'box-none' }]}
             >
                 {/* Botão para descartar a oferta (Swipe Left) */}
                 <IconButton

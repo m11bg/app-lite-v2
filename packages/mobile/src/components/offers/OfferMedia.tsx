@@ -161,15 +161,15 @@ export const OfferMedia: React.FC<OfferMediaProps> = ({
                 progress={currentMedia?.type === 'video' ? videoProgress : 1}
             />
 
-            <Animated.View style={[styles.flashOverlay, styles.leftFlash, { opacity: leftFlashAnim }]} pointerEvents="none">
+            <Animated.View style={[styles.flashOverlay, styles.leftFlash, { opacity: leftFlashAnim, pointerEvents: 'none' }]}>
                 <Icon name="chevron-left" size={48} color="rgba(255, 255, 255, 0.8)" />
             </Animated.View>
 
-            <Animated.View style={[styles.flashOverlay, styles.rightFlash, { opacity: rightFlashAnim }]} pointerEvents="none">
+            <Animated.View style={[styles.flashOverlay, styles.rightFlash, { opacity: rightFlashAnim, pointerEvents: 'none' }]}>
                 <Icon name="chevron-right" size={48} color="rgba(255, 255, 255, 0.8)" />
             </Animated.View>
 
-            <Animated.View style={[styles.flashOverlay, styles.centerFlash, { opacity: centerFlashAnim }]} pointerEvents="none">
+            <Animated.View style={[styles.flashOverlay, styles.centerFlash, { opacity: centerFlashAnim, pointerEvents: 'none' }]}>
                 <Icon name={isMuted ? 'volume-off' : 'volume-high'} size={64} color="rgba(255, 255, 255, 0.9)" />
             </Animated.View>
 
@@ -194,7 +194,7 @@ export const OfferMedia: React.FC<OfferMediaProps> = ({
                                     onError={handleVideoError}
                                     onProgressUpdate={setVideoProgress}
                                 />
-                                <View style={[styles.videoIndicator, { opacity: mediaLoaded ? 1 : 0 }]} pointerEvents="none">
+                                <View style={[styles.videoIndicator, { opacity: mediaLoaded ? 1 : 0, pointerEvents: 'none' }]}>
                                     <Icon name="play" size={16} color="white" />
                                 </View>
                                 <Pressable 

@@ -45,7 +45,6 @@ export const styles = StyleSheet.create({
     media: {
         width: '100%', // preenche toda a largura do container
         height: '100%', // preenche toda a altura do container
-        resizeMode: 'contain', // garante que a mídia caiba na tela sem cortar ou distorcer
     },
     closeButton: {
         position: 'absolute', // posicionamento flutuante sobre o conteúdo

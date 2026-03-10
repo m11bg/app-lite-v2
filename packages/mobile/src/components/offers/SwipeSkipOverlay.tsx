@@ -28,9 +28,8 @@ const SwipeSkipOverlay: React.FC<SwipeSkipOverlayProps> = ({
     iconSize = 80, 
     label = OFFER_TRANSLATIONS.OVERLAYS.SKIP
 }) => (
-    <View 
-        style={[styles.container, StyleSheet.absoluteFillObject]} 
-        pointerEvents="none"
+    <View
+        style={[styles.container, StyleSheet.absoluteFillObject, { pointerEvents: 'none' }]}
         accessibilityRole="image"
         accessibilityLabel={OFFER_TRANSLATIONS.OVERLAYS.ACCESSIBILITY_SKIP}
     >

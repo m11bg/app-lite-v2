@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, View, StyleProp, ViewStyle, useColorScheme } from 'react-native';
+import { Animated, View, StyleProp, ViewStyle, useColorScheme, Platform } from 'react-native';
 import { colors, radius as tokensRadius } from '@/styles/theme';
 
 // Função pura exportada para facilitar testes unitários
@@ -45,7 +45,7 @@ export const SkeletonBox: React.FC<SkeletonBoxProps> = ({
       Animated.timing(shimmer, {
         toValue: 1,
         duration: 1400,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
       })
     );
     anim.start();
@@ -75,7 +75,6 @@ export const SkeletonBox: React.FC<SkeletonBoxProps> = ({
       ]}
     >
       <Animated.View
-        pointerEvents="none"
         style={{
           position: 'absolute',
           left: -overlayWidth,
@@ -84,6 +83,7 @@ export const SkeletonBox: React.FC<SkeletonBoxProps> = ({
           width: overlayWidth,
           transform: [{ translateX }],
           backgroundColor: shimmerColor,
+          pointerEvents: 'none',
         }}
         testID="skeleton-shimmer"
       />

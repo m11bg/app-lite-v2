@@ -33,9 +33,8 @@ const SwipeNopeOverlay: React.FC<SwipeNopeOverlayProps> = ({
     iconSize = 80, 
     label = OFFER_TRANSLATIONS.OVERLAYS.NOPE
 }) => (
-    <View 
-        style={[styles.container, StyleSheet.absoluteFillObject]} 
-        pointerEvents="none"
+    <View
+        style={[styles.container, StyleSheet.absoluteFillObject, { pointerEvents: 'none' }]}
         accessibilityRole="image"
         accessibilityLabel={OFFER_TRANSLATIONS.OVERLAYS.ACCESSIBILITY_NOPE}
     >

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Avatar, IconButton, Menu, Divider, ActivityIndicator } from 'react-native-paper';
 import { useProfileAvatar } from '@/hooks/useProfileAvatar';
 import { colors } from '@/styles/theme';
@@ -153,11 +153,20 @@ const styles = StyleSheet.create({
     right: -4,
     backgroundColor: 'white',
     borderRadius: 20,
-    elevation: 4, // Sombra para dispositivos Android
-    shadowColor: '#000', // Início da configuração de sombra para iOS
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 4,
+      },
+      default: {
+        boxShadow: '0px 2px 2px rgba(0, 0, 0, 0.2)',
+      },
+    }),
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject, // Faz o overlay ocupar 100% do pai

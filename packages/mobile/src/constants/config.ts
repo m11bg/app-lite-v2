@@ -1,4 +1,5 @@
 import * as Updates from 'expo-updates';
+import { Platform } from 'react-native';
 
 // Configurações de ambiente
 const ENV = {
@@ -68,27 +69,48 @@ export const THEME_CONFIG = {
         bold: '700' as const,
     },
     shadows: {
-        sm: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.1,
-            shadowRadius: 2,
-            elevation: 2,
-        },
-        md: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.15,
-            shadowRadius: 4,
-            elevation: 4,
-        },
-        lg: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.2,
-            shadowRadius: 8,
-            elevation: 8,
-        },
+        sm: Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.1,
+                shadowRadius: 2,
+            },
+            android: {
+                elevation: 2,
+            },
+            default: {
+                boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.1)',
+            },
+        }),
+        md: Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.15,
+                shadowRadius: 4,
+            },
+            android: {
+                elevation: 4,
+            },
+            default: {
+                boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.15)',
+            },
+        }),
+        lg: Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.2,
+                shadowRadius: 8,
+            },
+            android: {
+                elevation: 8,
+            },
+            default: {
+                boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)',
+            },
+        }),
     },
 
     // Versão MAIÚSCULA (UPPER_SNAKE_CASE like) - aliases
@@ -137,27 +159,48 @@ export const THEME_CONFIG = {
         BOLD: '700' as const,
     },
     SHADOWS: {
-        SM: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.1,
-            shadowRadius: 2,
-            elevation: 2,
-        },
-        MD: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.15,
-            shadowRadius: 4,
-            elevation: 4,
-        },
-        LG: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.2,
-            shadowRadius: 8,
-            elevation: 8,
-        },
+        SM: Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.1,
+                shadowRadius: 2,
+            },
+            android: {
+                elevation: 2,
+            },
+            default: {
+                boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.1)',
+            },
+        }),
+        MD: Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.15,
+                shadowRadius: 4,
+            },
+            android: {
+                elevation: 4,
+            },
+            default: {
+                boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.15)',
+            },
+        }),
+        LG: Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.2,
+                shadowRadius: 8,
+            },
+            android: {
+                elevation: 8,
+            },
+            default: {
+                boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)',
+            },
+        }),
     },
 } as const;
 

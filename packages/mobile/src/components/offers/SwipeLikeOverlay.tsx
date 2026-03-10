@@ -29,8 +29,7 @@ const SwipeLikeOverlay: React.FC<SwipeLikeOverlayProps> = ({
     label = OFFER_TRANSLATIONS.OVERLAYS.LIKE
 }) => (
     <View 
-        style={[styles.container, StyleSheet.absoluteFillObject]} 
-        pointerEvents="none"
+        style={[styles.container, StyleSheet.absoluteFillObject, { pointerEvents: 'none' }]} 
         accessibilityRole="image"
         accessibilityLabel={OFFER_TRANSLATIONS.OVERLAYS.ACCESSIBILITY_LIKE}
     >
