@@ -89,7 +89,7 @@ app.use(
         },
         credentials: true, // Permite o envio de cookies e cabeçalhos de autorização
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control'],
     })
 );
 
