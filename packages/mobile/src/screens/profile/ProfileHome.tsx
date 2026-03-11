@@ -1,40 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useRoute, useIsFocused } from '@react-navigation/native';
-import type { RouteProp } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/styles/theme';
 import GuestProfileView from './GuestProfileView';
 import UserProfileView from './UserProfileView';
-import PublicProfileView from './PublicProfileView';
-import type { ProfileStackParamList } from '@/types';
 
 /**
- * Componente principal da tela de Perfil.
- * Atua como um contêiner que decide qual visualização exibir:
- * 
- * 1. Se `userId` é passado via params E é diferente do usuário logado:
- *    → Exibe o perfil público do outro usuário (PublicProfileView).
- * 2. Se `userId` não é passado OU é igual ao do usuário logado:
- *    → Exibe o perfil do próprio usuário (UserProfileView).
- * 3. Se o usuário não está autenticado:
- *    → Exibe a visão de visitante (GuestProfileView).
+ * Componente principal da tela de Perfil (aba Perfil).
+ *
+ * Esta tela é exclusivamente para o perfil do próprio usuário logado.
+ * A visualização de perfis de outros usuários é feita pela tela
+ * PublicProfileScreen, que fica no stack de Ofertas.
+ *
+ * Decide qual visualização exibir:
+ * 1. Se o usuário está autenticado → UserProfileView (perfil próprio).
+ * 2. Se não está autenticado → GuestProfileView (visitante).
  *
  * @component
  * @returns {JSX.Element} O componente renderizado da tela de Perfil.
  */
 const ProfileHome: React.FC = () => {
-  const route = useRoute<RouteProp<ProfileStackParamList, 'ProfileHome'>>();
-  const { isAuthenticated, user } = useAuth();
-  const isFocused = useIsFocused();
-
-  // Extrai o userId dos parâmetros da rota (pode ser undefined)
-  const targetUserId = route.params?.userId;
-
-  // Determina se estamos visualizando o perfil de outro usuário
-  const isOtherUser = Boolean(
-    targetUserId && user?.id && targetUserId !== user.id
-  );
+  const { isAuthenticated } = useAuth();
 
   // Estado que indica se a tela está em processo de carregamento inicial
   const [isLoading, setIsLoading] = useState(true);
@@ -57,14 +43,9 @@ const ProfileHome: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {isOtherUser ? (
-        // Perfil público de outro usuário
-        <PublicProfileView userId={targetUserId!} />
-      ) : isAuthenticated ? (
-        // Perfil do próprio usuário logado
+      {isAuthenticated ? (
         <UserProfileView isLoading={isLoading} showSkeleton={showSkeleton} />
       ) : (
-        // Visitante não autenticado
         <GuestProfileView />
       )}
     </View>

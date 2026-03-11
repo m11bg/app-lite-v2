@@ -4,7 +4,6 @@ import { navigationRef } from '@/navigation/RootNavigation';
 import { PrestadorResumo } from '@/types/profilePreview';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import { spacing, radius, colors } from '@/styles/theme';
-import { RootStackParamList } from '@/types';
 
 // Tipagem para o estado do contexto
 interface ProfilePreviewState {
@@ -46,15 +45,16 @@ export const ProfilePreviewProvider: React.FC<{ children: ReactNode }> = ({ chil
     // Aguarda o término da animação do modal para navegar suavemente
     requestAnimationFrame(() => {
       if (navigationRef.isReady()) {
-        // Navegação aninhada: navega para a aba Perfil > tela ProfileHome
-        // passando o userId do prestador selecionado como parâmetro.
-        // A tela ProfileHome usará esse userId para decidir se exibe
-        // o perfil público (outro usuário) ou o perfil próprio.
+        // Navega para a tela PublicProfile DENTRO do stack de Ofertas.
+        // Isso mantém o usuário na aba atual (Ofertas) e empilha a tela
+        // de perfil público sobre a tela de busca/swipe, permitindo
+        // que o botão "Voltar" funcione naturalmente.
+        // Não contamina a aba Perfil com params de outro usuário.
         // @ts-ignore - Tipagem flexível para navegação global
         navigationRef.navigate('Main', {
-          screen: 'Perfil',
+          screen: 'Ofertas',
           params: {
-            screen: 'ProfileHome',
+            screen: 'PublicProfile',
             params: { userId: profileId },
           },
         });
