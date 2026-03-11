@@ -65,14 +65,20 @@ export type OfertasStackParamList = {
      * @property {OfertaServico} oferta - Objeto com os dados da oferta a ser editada
      */
     EditOferta: { oferta: OfertaServico };
+    /**
+     * Tela de perfil público de outro usuário.
+     * Acessada a partir do contexto de ofertas (preview do prestador).
+     * @property {string} userId - ID do usuário cujo perfil público será exibido
+     */
+    PublicProfile: { userId: string };
 };
 
 /**
  * Define os parâmetros das rotas para a pilha de navegação do Perfil.
  */
 export type ProfileStackParamList = {
-    /** Tela inicial do perfil com informações do usuário ou de outro prestador */
-    ProfileHome: { userId?: string } | undefined;
+    /** Tela inicial do perfil do próprio usuário logado */
+    ProfileHome: undefined;
     /** Tela de configurações gerais da conta/aplicativo */
     Settings: undefined;
     /** Tela de gerenciamento e visualização de notificações */

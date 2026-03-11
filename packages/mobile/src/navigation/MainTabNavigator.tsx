@@ -12,6 +12,7 @@ import { MainTabParamList, OfertasStackParamList } from '@/types';
 import { colors } from '@/styles/theme';
 import CriarOfertaScreen from '@/screens/app/CriarOfertaScreen';
 import OfertaDetalheScreen from '@/screens/app/OfertaDetalheScreen';
+import PublicProfileScreen from '@/screens/app/PublicProfileScreen';
 import RequireAuth from '@/navigation/guards/RequireAuth';
 import SwipeOfertasScreen from '@/screens/app/SwipeOfertasScreen';
 
@@ -64,6 +65,12 @@ const OfertasNavigator = () => (
                     {React.createElement(require('@/screens/app/EditarOfertaScreen').default, props)}
                 </RequireAuth>
             )}
+        />
+        {/* Tela de perfil público de outro usuário - Acessada via preview do prestador */}
+        <OfertasStack.Screen
+            name="PublicProfile"
+            component={PublicProfileScreen}
+            options={{ title: 'Perfil do Prestador' }}
         />
     </OfertasStack.Navigator>
 );
