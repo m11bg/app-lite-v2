@@ -23,6 +23,9 @@ const avatarUpload = multer({
   },
 });
 
+// Retorna o perfil público de um usuário pelo ID (não requer autenticação)
+router.get('/:id/public', userController.getPublicProfile);
+
 // Atualiza (ou adiciona) a foto de perfil do usuário autenticado
 router.patch(
   '/me/avatar',

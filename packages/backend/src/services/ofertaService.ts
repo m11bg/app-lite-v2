@@ -159,7 +159,7 @@ export const ofertaService = {
                 },
             },
             // Remove informações sensíveis do usuário para segurança
-            { $project: { prestadorInfo: 0, 'prestador.password': 0, 'prestador.email': 0 } },
+            { $project: { prestadorInfo: 0, 'prestador.password': 0, 'prestador.senha': 0, 'prestador.email': 0, 'prestador.resetPasswordToken': 0, 'prestador.resetPasswordCode': 0, 'prestador.resetPasswordExpires': 0, 'prestador.emailChangeToken': 0, 'prestador.pendingEmail': 0, 'prestador.emailChangeExpires': 0 } },
         ];
 
         // --- 3. Execução de Busca Geoespacial (Distância) ---

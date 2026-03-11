@@ -22,6 +22,8 @@ interface ProfileHeaderProps {
   profileId: string;
   /** Se o componente deve exibir o modo de pré-visualização (contato) ou perfil completo (botão editar) */
   isPreview?: boolean;
+  /** Se true, indica que estamos visualizando o perfil público de outro usuário (sem botão editar) */
+  isPublicView?: boolean;
 }
 
 /**
@@ -34,7 +36,7 @@ interface ProfileHeaderProps {
  * @param {ProfileHeaderProps} props - Propriedades do componente.
  * @returns {JSX.Element} Cabeçalho estilizado do perfil.
  */
-const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, profileId, isPreview = false }) => {
+const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, profileId, isPreview = false, isPublicView = false }) => {
   /** Hook de navegação do React Navigation via referência global */
   const navigation = navigationRef;
   
@@ -94,7 +96,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, profileId, isPrevie
           {handle}
         </Text>
         <Text numberOfLines={2} ellipsizeMode="tail" style={[styles.textCenter]}>
-          Breve descrição sobre você. Toque para editar.
+          {isPublicView ? '' : 'Breve descrição sobre você. Toque para editar.'}
         </Text>
       </View>
 
@@ -105,9 +107,28 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, profileId, isPrevie
         <Kpi label="Pedidos" value="320" />
       </View>
 
-      {/* Seção de Ações: Botão de edição para perfil completo ou informações de contato para pré-visualização */}
+      {/* Seção de Ações: Depende do contexto (preview, público ou próprio perfil) */}
       <View style={styles.actionsContainer}>
         {isPreview ? (
+          // Modo preview: exibe informações de contato resumidas
+          <View style={styles.contactInfo}>
+            <View style={styles.infoRow}>
+              <MaterialCommunityIcons name="phone" size={16} color={colors.primary} />
+              <Text variant="bodyMedium" style={styles.infoText}>
+                {user?.telefone || 'Telefone não disponível'}
+              </Text>
+            </View>
+            <View style={styles.infoRow}>
+              <MaterialCommunityIcons name="map-marker" size={16} color={colors.primary} />
+              <Text variant="bodyMedium" style={styles.infoText}>
+                {user?.localizacao 
+                  ? `${user.localizacao.cidade} - ${user.localizacao.estado}` 
+                  : 'Localização não informada'}
+              </Text>
+            </View>
+          </View>
+        ) : isPublicView ? (
+          // Modo perfil público de outro usuário: exibe informações de contato (sem botão editar)
           <View style={styles.contactInfo}>
             <View style={styles.infoRow}>
               <MaterialCommunityIcons name="phone" size={16} color={colors.primary} />
@@ -125,6 +146,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, profileId, isPrevie
             </View>
           </View>
         ) : (
+          // Modo perfil próprio: exibe botão de edição
           <Button
             mode="contained"
             onPress={() => {

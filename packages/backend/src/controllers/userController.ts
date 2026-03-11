@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { Response, NextFunction, Request } from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { uploadService } from '../services/uploadService';
@@ -34,6 +34,52 @@ const findUserAndValidatePassword = async (
  * Contém métodos para manipulação de recursos como fotos de perfil (avatar).
  */
 export const userController = {
+  /**
+   * Retorna o perfil público de um usuário pelo ID.
+   * Não requer autenticação. Retorna apenas campos públicos (sem dados sensíveis).
+   *
+   * @route GET /v1/users/:id/public
+   * @param {Request} req - Requisição contendo o ID do usuário nos params.
+   * @param {Response} res - Resposta com os dados públicos do usuário.
+   * @param {NextFunction} next - Middleware de erro.
+   */
+  getPublicProfile: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+
+      if (!id || typeof id !== 'string') {
+        return res.status(400).json({ success: false, message: 'ID do usuário é obrigatório.' });
+      }
+
+      const user = await User.findById(id)
+        .select('nome avatar avatarBlurhash telefone localizacao tipoPessoa razaoSocial nomeFantasia ativo createdAt')
+        .lean();
+
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'Usuário não encontrado.' });
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          id: user._id,
+          nome: user.nome,
+          avatar: user.avatar ?? null,
+          avatarBlurhash: user.avatarBlurhash ?? null,
+          telefone: user.telefone ?? null,
+          localizacao: user.localizacao ?? null,
+          tipoPessoa: user.tipoPessoa ?? 'PF',
+          razaoSocial: user.razaoSocial ?? null,
+          nomeFantasia: user.nomeFantasia ?? null,
+          createdAt: user.createdAt,
+        },
+      });
+    } catch (error: any) {
+      logger.error('userController.getPublicProfile.error', { error: error.message, id: req.params?.id });
+      next(error);
+    }
+  },
+
   /**
    * Atualiza o nome do usuário autenticado.
    *
@@ -275,8 +321,7 @@ export const userController = {
    * 
    * @param {AuthRequest} req - Objeto de requisição do Express, contendo o arquivo e dados do usuário autenticado.
    * @param {Response} res - Objeto de resposta do Express usado para retornar o status e dados do usuário atualizado.
-   * @param {NextFunction} next - Função do Express para passar o controle/erro para o próximo middleware de tratamento.
-   * @returns {Promise<void>} - Retorna uma resposta JSON com o sucesso da operação e os dados do usuário.
+   * @param {NextFunction} next 
    */
   async updateAvatar(req: AuthRequest, res: Response, next: NextFunction) {
     try {

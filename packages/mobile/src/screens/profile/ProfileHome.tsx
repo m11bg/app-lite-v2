@@ -1,41 +1,54 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useRoute, useIsFocused } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/styles/theme';
 import GuestProfileView from './GuestProfileView';
 import UserProfileView from './UserProfileView';
+import PublicProfileView from './PublicProfileView';
+import type { ProfileStackParamList } from '@/types';
 
 /**
  * Componente principal da tela de Perfil.
- * Atua como um contêiner que decide se deve exibir a visão de usuário autenticado
- * ou a visão de visitante (guest), além de gerenciar um estado global de carregamento
- * para a tela.
+ * Atua como um contêiner que decide qual visualização exibir:
+ * 
+ * 1. Se `userId` é passado via params E é diferente do usuário logado:
+ *    → Exibe o perfil público do outro usuário (PublicProfileView).
+ * 2. Se `userId` não é passado OU é igual ao do usuário logado:
+ *    → Exibe o perfil do próprio usuário (UserProfileView).
+ * 3. Se o usuário não está autenticado:
+ *    → Exibe a visão de visitante (GuestProfileView).
  *
  * @component
  * @returns {JSX.Element} O componente renderizado da tela de Perfil.
  */
 const ProfileHome: React.FC = () => {
-  // Hook de autenticação para verificar se o usuário está logado
-  const { isAuthenticated } = useAuth();
-  
+  const route = useRoute<RouteProp<ProfileStackParamList, 'ProfileHome'>>();
+  const { isAuthenticated, user } = useAuth();
+  const isFocused = useIsFocused();
+
+  // Extrai o userId dos parâmetros da rota (pode ser undefined)
+  const targetUserId = route.params?.userId;
+
+  // Determina se estamos visualizando o perfil de outro usuário
+  const isOtherUser = Boolean(
+    targetUserId && user?.id && targetUserId !== user.id
+  );
+
   // Estado que indica se a tela está em processo de carregamento inicial
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Estado auxiliar para controlar a exibição do skeleton.
-  // Usado para evitar o efeito de "flicker" (piscada) em carregamentos muito rápidos.
   const [showSkeleton, setShowSkeleton] = useState(false);
 
   useEffect(() => {
-    // Agenda a exibição do skeleton após 200ms para evitar que ele apareça em transições instantâneas
     const delay = setTimeout(() => setShowSkeleton(true), 200);
-    
-    // Simula um tempo de carregamento de 2 segundos para fins de demonstração da UI
     const timer = setTimeout(() => {
       setIsLoading(false);
       setShowSkeleton(false);
     }, 2000);
-    
-    // Limpeza dos timers ao desmontar o componente para evitar vazamentos de memória e erros de estado
+
     return () => {
       clearTimeout(timer);
       clearTimeout(delay);
@@ -44,14 +57,14 @@ const ProfileHome: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* 
-        Renderização condicional baseada no status de autenticação:
-        - Se autenticado: Mostra os detalhes do perfil do usuário com estados de carregamento.
-        - Se não autenticado: Mostra a tela de convite para login/registro.
-      */}
-      {isAuthenticated ? (
+      {isOtherUser ? (
+        // Perfil público de outro usuário
+        <PublicProfileView userId={targetUserId!} />
+      ) : isAuthenticated ? (
+        // Perfil do próprio usuário logado
         <UserProfileView isLoading={isLoading} showSkeleton={showSkeleton} />
       ) : (
+        // Visitante não autenticado
         <GuestProfileView />
       )}
     </View>
@@ -62,10 +75,10 @@ const ProfileHome: React.FC = () => {
  * Estilos aplicados ao componente ProfileHome.
  */
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: colors.background,
-    },
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
 });
 
 export default ProfileHome;

@@ -46,11 +46,17 @@ export const ProfilePreviewProvider: React.FC<{ children: ReactNode }> = ({ chil
     // Aguarda o término da animação do modal para navegar suavemente
     requestAnimationFrame(() => {
       if (navigationRef.isReady()) {
-        // Navegação aninhada para garantir que o RootNavigator encontre a rota dentro da aba Perfil
+        // Navegação aninhada: navega para a aba Perfil > tela ProfileHome
+        // passando o userId do prestador selecionado como parâmetro.
+        // A tela ProfileHome usará esse userId para decidir se exibe
+        // o perfil público (outro usuário) ou o perfil próprio.
         // @ts-ignore - Tipagem flexível para navegação global
-        navigationRef.navigate('Perfil', {
-          screen: 'ProfileHome',
-          params: { userId: profileId },
+        navigationRef.navigate('Main', {
+          screen: 'Perfil',
+          params: {
+            screen: 'ProfileHome',
+            params: { userId: profileId },
+          },
         });
       }
     });

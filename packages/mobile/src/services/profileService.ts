@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import api from './api';
 import type { User } from '@/types';
+import type { PrestadorResumo } from '@/types/profilePreview';
 
 /**
  * Estrutura de resposta retornada pela API após o upload bem-sucedido de um avatar.
@@ -48,6 +49,38 @@ async function uriToBlob(uri: string): Promise<Blob> {
   // Fallback: tentar fetch direto
   const response = await fetch(uri);
   return await response.blob();
+}
+
+/**
+ * Busca o perfil público de um usuário pelo ID.
+ * Não requer autenticação. Retorna dados públicos formatados como PrestadorResumo.
+ *
+ * @async
+ * @function getPublicProfile
+ * @param {string} userId - O ID do usuário cujo perfil público será buscado.
+ * @returns {Promise<PrestadorResumo>} Dados públicos do usuário.
+ */
+export async function getPublicProfile(userId: string): Promise<PrestadorResumo> {
+  try {
+    const { data } = await api.get(`v1/users/${userId}/public`);
+    const u = data?.data ?? data;
+    return {
+      id: String(u?.id ?? u?._id ?? ''),
+      nome: String(u?.nome ?? ''),
+      avatar: u?.avatar ?? undefined,
+      avatarBlurhash: u?.avatarBlurhash ?? undefined,
+      avaliacao: u?.avaliacao ?? 0,
+      verified: u?.verified ?? false,
+      tipoPessoa: u?.tipoPessoa ?? 'PF',
+      localizacao: u?.localizacao ?? undefined,
+      telefone: u?.telefone ?? undefined,
+    };
+  } catch (err: unknown) {
+    const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+      ?? (err as { message?: string })?.message
+      ?? 'Erro ao buscar perfil público.';
+    throw new Error(message);
+  }
 }
 
 /**
@@ -272,7 +305,7 @@ const normalizeUser = (u: any): User => ({
   ativo: u?.ativo ?? false,
 });
 
-const profileService = { uploadAvatar, removeAvatar, updateName, updatePhone, updateLocation, updateEmail, confirmEmailChange, changePassword, updateCompanyData, updateDocuments };
+const profileService = { uploadAvatar, removeAvatar, updateName, updatePhone, updateLocation, updateEmail, confirmEmailChange, changePassword, updateCompanyData, updateDocuments, getPublicProfile };
 
 export default profileService;
 export { profileService };
