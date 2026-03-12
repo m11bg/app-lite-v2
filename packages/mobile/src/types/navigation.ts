@@ -6,9 +6,11 @@ import { OfertaServico } from './oferta';
  */
 export type RootStackParamList = {
     /** Rota para o fluxo de autenticação */
-    Auth: NavigatorScreenParams<AuthStackParamList>;
+    Auth: NavigatorScreenParams<AuthStackParamList> | undefined;
     /** Rota para o fluxo principal do aplicativo (Tabs) */
-    Main: NavigatorScreenParams<MainTabParamList>;
+    Main: NavigatorScreenParams<MainTabParamList> | undefined;
+    /** Rota para tela de erro 404 (Não Encontrado) */
+    NotFound: undefined;
 };
 
 /**

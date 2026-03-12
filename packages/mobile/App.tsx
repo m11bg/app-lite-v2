@@ -54,6 +54,7 @@ const linking: LinkingOptions<RootStackParamList> = {
                     },
                 },
             },
+            NotFound: '*',
             Auth: {
                 screens: {
                     Login: 'Login',

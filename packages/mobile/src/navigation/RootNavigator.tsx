@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '@/context/AuthContext';
 import AuthNavigator from './AuthNavigator';
 import MainTabNavigator from './MainTabNavigator';
+import NotFoundScreen from '../screens/NotFoundScreen';
 import LoadingScreen from '../screens/LoadingScreen';
 import { RootStackParamList } from '@/types';
 import { ROOT_ROUTES } from '@/navigation/RootNavigation';
@@ -20,6 +21,7 @@ const RootNavigator: React.FC = () => {
         <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name={ROOT_ROUTES.Main} component={MainTabNavigator} />
             <Stack.Screen name={ROOT_ROUTES.Auth} component={AuthNavigator} options={{ presentation: 'modal' }} />
+            <Stack.Screen name="NotFound" component={NotFoundScreen} />
         </Stack.Navigator>
     );
 };
