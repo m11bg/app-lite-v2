@@ -18,6 +18,42 @@ const linking: LinkingOptions<RootStackParamList> = {
     prefixes: [Linking.createURL('/'), 'applite://'],
     config: {
         screens: {
+            Main: {
+                path: 'Main',
+                screens: {
+                    Ofertas: {
+                        path: 'Ofertas',
+                        screens: {
+                            SwipeOfertas: 'SwipeOfertas',
+                            BuscarOfertas: 'BuscarOfertas',
+                            OfferDetail: 'OfferDetail',
+                            CreateOferta: 'CreateOferta',
+                            EditOferta: 'EditOferta',
+                            PublicProfile: {
+                                path: 'PublicProfile',
+                                parse: {
+                                    userId: (userId: string) => userId,
+                                },
+                            },
+                        },
+                    },
+                    Agenda: 'Agenda',
+                    Chat: 'Chat',
+                    Comunidade: 'Comunidade',
+                    Perfil: {
+                        path: 'Perfil',
+                        screens: {
+                            ProfileHome: 'ProfileHome',
+                            Settings: 'Settings',
+                            Notifications: 'Notifications',
+                            EditProfile: 'EditProfile',
+                            ChangePassword: 'ChangePassword',
+                            EditProfileDocument: 'EditProfileDocument',
+                            EditProfileCompany: 'EditProfileCompany',
+                        },
+                    },
+                },
+            },
             Auth: {
                 screens: {
                     Login: 'Login',
