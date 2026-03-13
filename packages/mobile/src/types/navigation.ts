@@ -1,5 +1,6 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
 import { OfertaServico } from './oferta';
+import { PrestadorResumo } from './profilePreview';
 
 /**
  * Define os parâmetros das rotas para o navegador de pilha raiz (Root Stack).
@@ -70,9 +71,12 @@ export type OfertasStackParamList = {
     /**
      * Tela de perfil público de outro usuário.
      * Acessada a partir do contexto de ofertas (preview do prestador).
+     * Recebe os dados do prestador diretamente (já disponíveis no contexto da oferta)
+     * para exibição imediata, sem depender de chamada à API.
      * @property {string} userId - ID do usuário cujo perfil público será exibido
+     * @property {PrestadorResumo} prestador - Dados do prestador já disponíveis no contexto
      */
-    PublicProfile: { userId: string };
+    PublicProfile: { userId: string; prestador: PrestadorResumo };
 };
 
 /**

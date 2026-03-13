@@ -3,7 +3,6 @@ import { StyleSheet, View, ScrollView } from 'react-native';
 import { Text, Divider, Button } from 'react-native-paper';
 import { colors, spacing } from '@/styles/theme';
 import ProfileHeader from '@/components/profile/ProfileHeader';
-import ProfileHeaderSkeleton from '@/components/profile/skeletons/ProfileHeaderSkeleton';
 import { TrustFooter } from '@/components/profile/TrustFooter';
 import { getPublicProfile } from '@/services/profileService';
 import type { PrestadorResumo } from '@/types/profilePreview';
@@ -17,74 +16,61 @@ type Props = NativeStackScreenProps<OfertasStackParamList, 'PublicProfile'>;
  * Acessada a partir do stack de Ofertas quando o usuário clica em
  * "Ver Perfil Completo" no modal de preview do prestador.
  *
- * Esta tela busca os dados públicos do usuário pela API e exibe
- * o cabeçalho com informações públicas, sem expor dados sensíveis.
+ * Estratégia de dados:
+ * 1. Exibe imediatamente os dados do prestador recebidos via params (vindos da oferta).
+ * 2. Em background, tenta buscar dados atualizados da API (enriquecimento opcional).
+ * 3. Se a API falhar, mantém os dados locais — o usuário nunca vê erro.
  *
  * @component
- * @param {Props} props - Props de navegação contendo o userId nos params.
+ * @param {Props} props - Props de navegação contendo userId e prestador nos params.
  * @returns {JSX.Element} Tela de perfil público renderizada.
  */
 const PublicProfileScreen: React.FC<Props> = ({ route, navigation }) => {
-  const { userId } = route.params;
-  const [profile, setProfile] = useState<PrestadorResumo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { userId, prestador: prestadorFromParams } = route.params;
 
+  // Usa os dados do prestador recebidos via params como estado inicial (exibição imediata)
+  const [profile, setProfile] = useState<PrestadorResumo>(prestadorFromParams);
+
+  // Tenta enriquecer os dados com a API em background (opcional, não bloqueia UI)
   useEffect(() => {
     let cancelled = false;
 
-    const fetchProfile = async () => {
+    const enrichProfile = async () => {
       try {
-        setIsLoading(true);
-        setError(null);
-        const data = await getPublicProfile(userId);
-        if (!cancelled) {
-          setProfile(data);
+        const freshData = await getPublicProfile(userId);
+        if (!cancelled && freshData) {
+          setProfile(freshData);
         }
-      } catch (err: unknown) {
-        if (!cancelled) {
-          setError((err as Error)?.message ?? 'Erro ao carregar perfil.');
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+      } catch {
+        // Falha silenciosa: mantém os dados locais do prestador.
+        // O endpoint pode não estar disponível na VPS ainda.
       }
     };
 
-    void fetchProfile();
+    void enrichProfile();
 
     return () => {
       cancelled = true;
     };
   }, [userId]);
 
-  const userForFooter = useMemo(() => {
-    if (!profile) return null;
-    return {
-      id: profile.id,
-      nome: profile.nome,
-      avatar: profile.avatar,
-      localizacao: profile.localizacao,
-      telefone: profile.telefone,
-      tipoPessoa: profile.tipoPessoa,
-      createdAt: undefined,
-    };
-  }, [profile]);
+  const userForFooter = useMemo(() => ({
+    id: profile.id,
+    nome: profile.nome,
+    avatar: profile.avatar,
+    localizacao: profile.localizacao,
+    telefone: profile.telefone,
+    tipoPessoa: profile.tipoPessoa,
+    createdAt: undefined,
+  }), [profile]);
 
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <ProfileHeaderSkeleton />
-      </View>
-    );
-  }
-
-  if (error || !profile) {
+  // Se por algum motivo não temos dados do prestador (caso extremo),
+  // exibe mensagem de fallback com botão de voltar.
+  if (!profile) {
     return (
       <View style={[styles.container, styles.centered]}>
         <Text variant="bodyLarge" style={{ color: colors.textSecondary }}>
-          {error ?? 'Perfil não encontrado.'}
+          Perfil não encontrado.
         </Text>
         <Button
           mode="text"

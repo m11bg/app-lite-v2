@@ -30,7 +30,7 @@ const linking: LinkingOptions<RootStackParamList> = {
                             CreateOferta: 'CreateOferta',
                             EditOferta: 'EditOferta',
                             PublicProfile: {
-                                path: 'PublicProfile',
+                                path: 'PublicProfile/:userId',
                                 parse: {
                                     userId: (userId: string) => userId,
                                 },

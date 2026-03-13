@@ -36,8 +36,8 @@ export const ProfilePreviewProvider: React.FC<{ children: ReactNode }> = ({ chil
   }, []);
 
   const navigateToProfile = useCallback(() => {
-    const profileId = state.prestador?.id;
-    if (!profileId) return;
+    const prestador = state.prestador;
+    if (!prestador?.id) return;
 
     // Fecha o modal primeiro
     hideProfile();
@@ -45,22 +45,23 @@ export const ProfilePreviewProvider: React.FC<{ children: ReactNode }> = ({ chil
     // Aguarda o término da animação do modal para navegar suavemente
     requestAnimationFrame(() => {
       if (navigationRef.isReady()) {
-        // Navega para a tela PublicProfile DENTRO do stack de Ofertas.
-        // Isso mantém o usuário na aba atual (Ofertas) e empilha a tela
-        // de perfil público sobre a tela de busca/swipe, permitindo
-        // que o botão "Voltar" funcione naturalmente.
-        // Não contamina a aba Perfil com params de outro usuário.
+        // Navega para a tela PublicProfile DENTRO do stack de Ofertas,
+        // passando os dados completos do prestador que já temos no contexto.
+        // Isso garante exibição imediata sem depender de chamada à API.
         // @ts-ignore - Tipagem flexível para navegação global
         navigationRef.navigate('Main', {
           screen: 'Ofertas',
           params: {
             screen: 'PublicProfile',
-            params: { userId: profileId },
+            params: {
+              userId: prestador.id,
+              prestador,
+            },
           },
         });
       }
     });
-  }, [state.prestador?.id, hideProfile]);
+  }, [state.prestador, hideProfile]);
 
   const stateValue = useMemo(() => state, [state]);
   const actionsValue = useMemo(() => ({
