@@ -12,6 +12,8 @@ import { PrestadorResumo } from '@/types/profilePreview';
 
 import OptimizedImage from '@/components/common/OptimizedImage';
 
+import { formatPhoneNumber } from '@/utils/phoneFormatter';
+
 /**
  * Definição das propriedades para o componente ProfileHeader.
  */
@@ -115,7 +117,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, profileId, isPrevie
             <View style={styles.infoRow}>
               <MaterialCommunityIcons name="phone" size={16} color={colors.primary} />
               <Text variant="bodyMedium" style={styles.infoText}>
-                {user?.telefone || 'Telefone não disponível'}
+                {user?.telefone ? formatPhoneNumber(user.telefone) : 'Telefone não disponível'}
               </Text>
             </View>
             <View style={styles.infoRow}>
@@ -133,7 +135,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, profileId, isPrevie
             <View style={styles.infoRow}>
               <MaterialCommunityIcons name="phone" size={16} color={colors.primary} />
               <Text variant="bodyMedium" style={styles.infoText}>
-                {user?.telefone || 'Telefone não disponível'}
+                {user?.telefone ? formatPhoneNumber(user.telefone) : 'Telefone não disponível'}
               </Text>
             </View>
             <View style={styles.infoRow}>

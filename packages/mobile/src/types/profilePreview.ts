@@ -35,7 +35,8 @@ export const toPrestadorResumo = (prestador: any, localizacaoOferta?: any): Pres
     verified: prestador.verified,
     tipoPessoa: prestador.tipoPessoa,
     localizacao: prestador.localizacao || localizacaoOferta,
-    telefone: prestador.telefone,
+    // Suporte a diferentes nomes de campo vindos do backend para maior resiliência
+    telefone: prestador.telefone || prestador.phone || prestador.celular || prestador.contato,
   };
 };
 
