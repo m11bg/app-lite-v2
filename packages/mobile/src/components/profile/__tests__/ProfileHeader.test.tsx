@@ -28,8 +28,19 @@ jest.mock('react-native', () => {
     StyleSheet,
     Appearance: { getColorScheme: () => 'light' },
     Platform: { OS: 'ios', select: (obj: any) => obj.ios || obj.default },
+    Linking: {
+        openURL: jest.fn(() => Promise.resolve()),
+        canOpenURL: jest.fn(() => Promise.resolve(true)),
+    },
+    Alert: {
+        alert: jest.fn(),
+    },
   };
 });
+
+jest.mock('@/utils/alert', () => ({
+    showAlert: jest.fn(),
+}));
 
 // Mock dos ícones e outros componentes
 jest.mock('@expo/vector-icons', () => ({
@@ -295,6 +306,134 @@ describe('ProfileHeader', () => {
     });
 
     expect(navigationRef.navigate).toHaveBeenCalledWith('Perfil', { screen: 'Settings' });
+  });
+
+  it('deve chamar Linking.openURL com tel: ao tocar no ícone de ligação (isPreview)', async () => {
+    const { Linking } = require('react-native');
+    let tree: any;
+    act(() => {
+        tree = renderer.create(
+            <ProfileHeader user={mockUser} profileId={mockUser.id} isPreview={true} />
+        );
+    });
+
+    // Encontrar o TouchableOpacity com accessibilityLabel de ligação
+    const touchables = tree.root.findAllByType('pressable');
+    const callBtn = touchables.find(
+        (t: any) => t.props.accessibilityLabel?.includes('Ligar para')
+    );
+    expect(callBtn).toBeTruthy();
+
+    await act(async () => {
+        await callBtn.props.onPress();
+    });
+
+    expect(Linking.canOpenURL).toHaveBeenCalledWith('tel:11987654321');
+    expect(Linking.openURL).toHaveBeenCalledWith('tel:11987654321');
+  });
+
+  it('deve chamar Linking.openURL com wa.me ao tocar no ícone do WhatsApp (isPreview)', async () => {
+    const { Linking } = require('react-native');
+    let tree: any;
+    act(() => {
+        tree = renderer.create(
+            <ProfileHeader user={mockUser} profileId={mockUser.id} isPreview={true} />
+        );
+    });
+
+    const touchables = tree.root.findAllByType('pressable');
+    const waBtn = touchables.find(
+        (t: any) => t.props.accessibilityLabel?.includes('WhatsApp')
+    );
+    expect(waBtn).toBeTruthy();
+
+    await act(async () => {
+        await waBtn.props.onPress();
+    });
+
+    expect(Linking.canOpenURL).toHaveBeenCalledWith('https://wa.me/5511987654321');
+    expect(Linking.openURL).toHaveBeenCalledWith('https://wa.me/5511987654321');
+  });
+
+  it('deve exibir "Telefone não disponível" quando user.telefone é undefined (isPreview)', () => {
+    const userNoPhone = { ...mockUser, telefone: undefined };
+    let tree: any;
+    act(() => {
+        tree = renderer.create(
+            <ProfileHeader user={userNoPhone} profileId={userNoPhone.id} isPreview={true} />
+        );
+    });
+
+    expect(findText(tree, 'Telefone não disponível')).toBe(true);
+  });
+
+  it('deve exibir alerta quando canOpenURL retorna false', async () => {
+    const { Linking } = require('react-native');
+    const { showAlert } = require('@/utils/alert');
+    (Linking.canOpenURL as jest.Mock).mockResolvedValueOnce(false);
+
+    let tree: any;
+    act(() => {
+        tree = renderer.create(
+            <ProfileHeader user={mockUser} profileId={mockUser.id} isPreview={true} />
+        );
+    });
+
+    const touchables = tree.root.findAllByType('pressable');
+    const callBtn = touchables.find(
+        (t: any) => t.props.accessibilityLabel?.includes('Ligar para')
+    );
+
+    await act(async () => {
+        await callBtn.props.onPress();
+    });
+
+    expect(showAlert).toHaveBeenCalledWith('Erro', 'Não foi possível abrir o discador neste dispositivo.');
+    expect(Linking.openURL).not.toHaveBeenCalled();
+  });
+
+  it('deve trackear evento de analytics ao clicar em ligação', async () => {
+    const { Linking } = require('react-native');
+    let tree: any;
+    act(() => {
+        tree = renderer.create(
+            <ProfileHeader user={mockUser} profileId={mockUser.id} isPreview={true} />
+        );
+    });
+
+    const touchables = tree.root.findAllByType('pressable');
+    const callBtn = touchables.find(
+        (t: any) => t.props.accessibilityLabel?.includes('Ligar para')
+    );
+
+    await act(async () => {
+        await callBtn.props.onPress();
+    });
+
+    expect(AnalyticsService.track).toHaveBeenCalledWith('profile_phone_call', { profileId: mockUser.id });
+  });
+
+  it('deve funcionar igualmente em isPublicView', () => {
+    let tree: any;
+    act(() => {
+        tree = renderer.create(
+            <ProfileHeader user={mockUser} profileId={mockUser.id} isPublicView={true} />
+        );
+    });
+
+    // Deve exibir telefone formatado
+    expect(findText(tree, '(11) 98765-4321')).toBe(true);
+
+    // Deve ter botões de ação (ligação e WhatsApp)
+    const touchables = tree.root.findAllByType('pressable');
+    const callBtn = touchables.find(
+        (t: any) => t.props.accessibilityLabel?.includes('Ligar para')
+    );
+    const waBtn = touchables.find(
+        (t: any) => t.props.accessibilityLabel?.includes('WhatsApp')
+    );
+    expect(callBtn).toBeTruthy();
+    expect(waBtn).toBeTruthy();
   });
 });
 
