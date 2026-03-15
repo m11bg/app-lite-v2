@@ -141,10 +141,54 @@ export function usePhoneFormatter() {
     return { format, validate, clean };
 }
 
+/**
+ * Normaliza um número de telefone brasileiro para uso com APIs externas.
+ * Remove caracteres não numéricos e garante o prefixo do país (55).
+ *
+ * @param value - Telefone em qualquer formato
+ * @returns Apenas dígitos com prefixo 55 (ex: "5511999887766")
+ */
+export function toE164Digits(value: string): string {
+    const digits = removeNonNumeric(value);
+
+    // Se já tem 12-13 dígitos e começa com 55, já está no formato correto
+    if ((digits.length === 12 || digits.length === 13) && digits.startsWith('55')) {
+        return digits;
+    }
+
+    // Se tem 10-11 dígitos (formato nacional), adiciona o 55
+    if (digits.length === 10 || digits.length === 11) {
+        return `55${digits}`;
+    }
+
+    // Fallback: retorna o que tem (pode ser incompleto)
+    return digits;
+}
+
+/**
+ * Normaliza um telefone para exibição, removendo o código do país se presente.
+ * Garante que formatPhoneNumber receba apenas os 10-11 dígitos nacionais.
+ *
+ * @param value - Telefone em qualquer formato
+ * @returns Telefone formatado para exibição BR: "(XX) XXXXX-XXXX"
+ */
+export function formatPhoneForDisplay(value: string): string {
+    const digits = removeNonNumeric(value);
+
+    // Se começa com 55 e tem 12-13 dígitos, remove o código do país antes de formatar
+    if ((digits.length === 12 || digits.length === 13) && digits.startsWith('55')) {
+        return formatPhoneNumber(digits.slice(2));
+    }
+
+    return formatPhoneNumber(digits);
+}
+
 // Export default como "facade" para facilitar importações em diferentes estilos.
 // Observação: para melhor tree-shaking, prefira os exports nomeados quando possível.
 export default {
     formatPhoneNumber,
+    formatPhoneForDisplay,
+    toE164Digits,
     isValidPhoneNumber,
     removeNonNumeric,
     usePhoneFormatter,

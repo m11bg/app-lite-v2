@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { View, StyleSheet, Linking, TouchableOpacity } from 'react-native';
 import { Text, Avatar, Button, IconButton } from 'react-native-paper';
 import { colors, spacing, radius } from '@/styles/theme';
 import { THEME_CONFIG } from '@/constants/config';
@@ -12,7 +12,8 @@ import { PrestadorResumo } from '@/types/profilePreview';
 
 import OptimizedImage from '@/components/common/OptimizedImage';
 
-import { formatPhoneNumber } from '@/utils/phoneFormatter';
+import { formatPhoneForDisplay, toE164Digits } from '@/utils/phoneFormatter';
+import { showAlert } from '@/utils/alert';
 
 /**
  * Definição das propriedades para o componente ProfileHeader.
@@ -71,6 +72,53 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, profileId, isPrevie
     setImageError(false);
   }, [avatarUrl]);
 
+  /**
+   * Abre o discador nativo com o número de telefone.
+   * Verifica se o dispositivo suporta o protocolo tel: antes de abrir.
+   */
+  const handleCall = useCallback(async (phone: string): Promise<void> => {
+    const digits = toE164Digits(phone);
+    // Para ligação, usa apenas os dígitos nacionais (sem código do país)
+    const nationalDigits = digits.startsWith('55') ? digits.slice(2) : digits;
+    const url = `tel:${nationalDigits}`;
+
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        AnalyticsService.track('profile_phone_call', { profileId });
+        await Linking.openURL(url);
+      } else {
+        showAlert('Erro', 'Não foi possível abrir o discador neste dispositivo.');
+      }
+    } catch {
+      showAlert('Erro', 'Ocorreu um erro ao tentar fazer a ligação.');
+    }
+  }, [profileId]);
+
+  /**
+   * Abre o WhatsApp com o número do prestador.
+   * Utiliza o formato internacional (com código 55 do Brasil).
+   */
+  const handleWhatsApp = useCallback(async (phone: string): Promise<void> => {
+    const waNumber = toE164Digits(phone);
+    const url = `https://wa.me/${waNumber}`;
+
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        AnalyticsService.track('profile_whatsapp_click', { profileId });
+        await Linking.openURL(url);
+      } else {
+        showAlert(
+          'WhatsApp indisponível',
+          'Não foi possível abrir o WhatsApp. Verifique se o app está instalado.'
+        );
+      }
+    } catch {
+      showAlert('Erro', 'Ocorreu um erro ao tentar abrir o WhatsApp.');
+    }
+  }, [profileId]);
+
   return (
     <View style={styles.container}>
       {/* Seção do Avatar com suporte a carregamento otimizado e badge de verificado */}
@@ -111,42 +159,12 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, profileId, isPrevie
 
       {/* Seção de Ações: Depende do contexto (preview, público ou próprio perfil) */}
       <View style={styles.actionsContainer}>
-        {isPreview ? (
-          // Modo preview: exibe informações de contato resumidas
-          <View style={styles.contactInfo}>
-            <View style={styles.infoRow}>
-              <MaterialCommunityIcons name="phone" size={16} color={colors.primary} />
-              <Text variant="bodyMedium" style={styles.infoText}>
-                {user?.telefone ? formatPhoneNumber(user.telefone) : 'Telefone não disponível'}
-              </Text>
-            </View>
-            <View style={styles.infoRow}>
-              <MaterialCommunityIcons name="map-marker" size={16} color={colors.primary} />
-              <Text variant="bodyMedium" style={styles.infoText}>
-                {user?.localizacao 
-                  ? `${user.localizacao.cidade} - ${user.localizacao.estado}` 
-                  : 'Localização não informada'}
-              </Text>
-            </View>
-          </View>
-        ) : isPublicView ? (
-          // Modo perfil público de outro usuário: exibe informações de contato (sem botão editar)
-          <View style={styles.contactInfo}>
-            <View style={styles.infoRow}>
-              <MaterialCommunityIcons name="phone" size={16} color={colors.primary} />
-              <Text variant="bodyMedium" style={styles.infoText}>
-                {user?.telefone ? formatPhoneNumber(user.telefone) : 'Telefone não disponível'}
-              </Text>
-            </View>
-            <View style={styles.infoRow}>
-              <MaterialCommunityIcons name="map-marker" size={16} color={colors.primary} />
-              <Text variant="bodyMedium" style={styles.infoText}>
-                {user?.localizacao 
-                  ? `${user.localizacao.cidade} - ${user.localizacao.estado}` 
-                  : 'Localização não informada'}
-              </Text>
-            </View>
-          </View>
+        {(isPreview || isPublicView) ? (
+          <ContactInfo
+            user={user}
+            onCall={handleCall}
+            onWhatsApp={handleWhatsApp}
+          />
         ) : (
           // Modo perfil próprio: exibe botão de edição
           <Button
@@ -191,6 +209,67 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, profileId, isPrevie
     </View>
   );
 };
+
+/**
+ * Informações de contato do prestador com ações de ligação e WhatsApp.
+ */
+interface ContactInfoProps {
+  user: PrestadorResumo | null;
+  onCall: (phone: string) => void;
+  onWhatsApp: (phone: string) => void;
+}
+
+const ContactInfo: React.FC<ContactInfoProps> = ({ user, onCall, onWhatsApp }) => (
+  <View style={styles.contactInfo}>
+    {/* Linha do Telefone com ações de contato */}
+    <View style={styles.phoneRow}>
+      {user?.telefone ? (
+        <>
+          <TouchableOpacity
+            onPress={() => onCall(user.telefone!)}
+            accessibilityRole="button"
+            accessibilityLabel={`Ligar para ${formatPhoneForDisplay(user.telefone)}`}
+            activeOpacity={0.7}
+            style={styles.phoneAction}
+          >
+            <MaterialCommunityIcons name="phone" size={18} color={colors.primary} />
+          </TouchableOpacity>
+
+          <Text variant="bodyMedium" style={styles.infoText}>
+            {formatPhoneForDisplay(user.telefone)}
+          </Text>
+
+          <TouchableOpacity
+            onPress={() => onWhatsApp(user.telefone!)}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir conversa no WhatsApp"
+            activeOpacity={0.7}
+            style={styles.phoneAction}
+          >
+            <MaterialCommunityIcons name="whatsapp" size={18} color="#25D366" />
+          </TouchableOpacity>
+        </>
+      ) : (
+        <>
+          <MaterialCommunityIcons name="phone-off" size={16} color={colors.textSecondary} />
+          <Text variant="bodyMedium" style={styles.infoText}>
+            Telefone não disponível
+          </Text>
+        </>
+      )}
+    </View>
+
+    {/* Linha da Localização (sem alteração de comportamento) */}
+    <View style={styles.infoRow}>
+      <MaterialCommunityIcons name="map-marker" size={16} color={colors.primary} />
+      <Text variant="bodyMedium" style={styles.infoText}>
+        {user?.localizacao
+          ? `${user.localizacao.cidade} - ${user.localizacao.estado}`
+          : 'Localização não informada'}
+      </Text>
+    </View>
+  </View>
+);
 
 /**
  * Componente interno para exibição do selo de verificado.
@@ -288,6 +367,16 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs,
     color: colors.textSecondary,
     fontSize: 14,
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  phoneAction: {
+    padding: 6,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
   },
 });
 
