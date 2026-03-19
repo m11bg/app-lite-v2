@@ -8,6 +8,7 @@ import RootNavigator from './src/navigation/RootNavigator';
 import { GlobalDialog } from './src/components/common/GlobalDialog';
 import { AuthProvider } from '@/context/AuthContext';
 import { ProfilePreviewProvider } from '@/context/ProfilePreviewContext';
+import { ChatProvider } from '@/context/chat/ChatProvider';
 // import { lightTheme, darkTheme } from '@/styles/theme';
 import { lightTheme } from '@/styles/theme';
 import { navigationRef } from '@/navigation/RootNavigation';
@@ -38,7 +39,13 @@ const linking: LinkingOptions<RootStackParamList> = {
                         },
                     },
                     Agenda: 'Agenda',
-                    Chat: 'Chat',
+                    Chat: {
+                        path: 'Chat',
+                        screens: {
+                            ChatList: 'ChatList',
+                            ConversationDetail: 'ConversationDetail/:conversationId',
+                        },
+                    },
                     Comunidade: 'Comunidade',
                     Perfil: {
                         path: 'Perfil',
@@ -84,14 +91,16 @@ const App: React.FC = () => {
         <GestureHandlerRootView style={{ flex: 1 }}>
             <SafeAreaProvider>
                 <AuthProvider>
-                    <PaperProvider theme={paperTheme}>
-                        <NavigationContainer theme={navigationTheme} ref={navigationRef} linking={linking}>
-                            <ProfilePreviewProvider>
-                                <RootNavigator />
-                            </ProfilePreviewProvider>
-                        </NavigationContainer>
-                        <GlobalDialog />
-                    </PaperProvider>
+                    <ChatProvider>
+                        <PaperProvider theme={paperTheme}>
+                            <NavigationContainer theme={navigationTheme} ref={navigationRef} linking={linking}>
+                                <ProfilePreviewProvider>
+                                    <RootNavigator />
+                                </ProfilePreviewProvider>
+                            </NavigationContainer>
+                            <GlobalDialog />
+                        </PaperProvider>
+                    </ChatProvider>
                 </AuthProvider>
             </SafeAreaProvider>
         </GestureHandlerRootView>

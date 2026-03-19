@@ -1,13 +1,16 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { StyleSheet, View, ScrollView } from 'react-native';
 import { Text, Divider, Button } from 'react-native-paper';
 import { colors, spacing } from '@/styles/theme';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import { TrustFooter } from '@/components/profile/TrustFooter';
 import { getPublicProfile } from '@/services/profileService';
+import { useChatActions } from '@/context/chat/ChatActionsContext';
+import { useAuth } from '@/context/AuthContext';
 import type { PrestadorResumo } from '@/types/profilePreview';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { OfertasStackParamList } from '@/types';
+import { useNavigation } from '@react-navigation/native';
 
 type Props = NativeStackScreenProps<OfertasStackParamList, 'PublicProfile'>;
 
@@ -30,6 +33,11 @@ const PublicProfileScreen: React.FC<Props> = ({ route, navigation }) => {
 
   // Usa os dados do prestador recebidos via params como estado inicial (exibição imediata)
   const [profile, setProfile] = useState<PrestadorResumo>(prestadorFromParams);
+  const [isChatLoading, setIsChatLoading] = useState(false);
+
+  const { createConversation } = useChatActions();
+  const { isAuthenticated } = useAuth();
+  const rootNavigation = useNavigation<any>();
 
   // Tenta enriquecer os dados com a API em background (opcional, não bloqueia UI)
   useEffect(() => {
@@ -53,6 +61,36 @@ const PublicProfileScreen: React.FC<Props> = ({ route, navigation }) => {
       cancelled = true;
     };
   }, [userId]);
+
+  /**
+   * Inicia conversa e navega para a tab Chat via cross-tab navigation.
+   * Cria ou recupera conversa existente (idempotente) e redireciona.
+   */
+  const handleStartChat = useCallback(async () => {
+    if (!isAuthenticated) return;
+
+    try {
+      setIsChatLoading(true);
+      const conversationId = await createConversation(userId);
+
+      // Navegação cross-tab: Ofertas → Chat → ConversationDetail
+      rootNavigation.navigate('Chat', {
+        screen: 'ConversationDetail',
+        params: {
+          conversationId,
+          participant: {
+            _id: profile.id,
+            nome: profile.nome,
+            avatar: profile.avatar,
+          },
+        },
+      });
+    } catch {
+      // Erro silencioso — futuramente mostrar Toast
+    } finally {
+      setIsChatLoading(false);
+    }
+  }, [isAuthenticated, createConversation, userId, rootNavigation, profile]);
 
   const userForFooter = useMemo(() => ({
     id: profile.id,
@@ -90,6 +128,8 @@ const PublicProfileScreen: React.FC<Props> = ({ route, navigation }) => {
         profileId={profile.id}
         isPreview={false}
         isPublicView={true}
+        onStartChat={isAuthenticated ? handleStartChat : undefined}
+        isChatLoading={isChatLoading}
       />
 
       <ScrollView

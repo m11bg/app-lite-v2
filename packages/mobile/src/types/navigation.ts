@@ -1,6 +1,7 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
 import { OfertaServico } from './oferta';
 import { PrestadorResumo } from './profilePreview';
+import { ParticipantInfo } from './chat';
 
 /**
  * Define os parâmetros das rotas para o navegador de pilha raiz (Root Stack).
@@ -33,6 +34,19 @@ export type AuthStackParamList = {
 };
 
 /**
+ * Define os parâmetros das rotas para o stack de Chat.
+ */
+export type ChatStackParamList = {
+    /** Tela de lista de conversas ativas */
+    ChatList: undefined;
+    /** Tela de detalhe/mensagens de uma conversa */
+    ConversationDetail: {
+        conversationId: string;
+        participant: ParticipantInfo;
+    };
+};
+
+/**
  * Define os parâmetros das rotas para o navegador de abas (Tabs) principal.
  */
 export type MainTabParamList = {
@@ -41,7 +55,7 @@ export type MainTabParamList = {
     /** Aba da agenda de compromissos */
     Agenda: undefined;
     /** Aba de chat para comunicação entre usuários */
-    Chat: undefined;
+    Chat: NavigatorScreenParams<ChatStackParamList>;
     /** Aba da comunidade/feed social */
     Comunidade: undefined;
     /** Aba de perfil do usuário, contendo sua própria pilha de navegação */

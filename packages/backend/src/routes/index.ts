@@ -11,6 +11,7 @@ import userRoutes from './userRoutes';
 import uploadRoutes from './uploadRoutes';
 import ofertaRoutes from './ofertaRoutes';
 import interactionRoutes from './interactionRoutes';
+import chatRoutes from './chatRoutes';
 import { generalLimiter } from '../middleware/rateLimiter';
 import config from '../config';
 import { isDbReady } from '../config/database';
@@ -36,6 +37,7 @@ router.use('/v1/users', userRoutes);    // Rotas de perfil e gestão de usuário
 router.use('/upload', uploadRoutes);    // Rotas para upload de mídias e arquivos
 router.use('/ofertas', ofertaRoutes);   // Rotas para gestão e consulta de ofertas de serviço
 router.use('/v1', interactionRoutes);   // Rotas de interação (likes/dislikes) integradas na v1
+router.use('/v1/chat', chatRoutes);     // Rotas de chat (conversas e mensagens) na v1
 
 /**
  * Endpoint de Health Check.
