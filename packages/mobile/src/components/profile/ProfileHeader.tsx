@@ -27,6 +27,10 @@ interface ProfileHeaderProps {
   isPreview?: boolean;
   /** Se true, indica que estamos visualizando o perfil público de outro usuário (sem botão editar) */
   isPublicView?: boolean;
+  /** Callback para iniciar conversa no chat (opcional, injetado pela PublicProfileScreen). */
+  onStartChat?: () => void;
+  /** Se o botão de chat está carregando. */
+  isChatLoading?: boolean;
 }
 
 /**
@@ -39,7 +43,7 @@ interface ProfileHeaderProps {
  * @param {ProfileHeaderProps} props - Propriedades do componente.
  * @returns {JSX.Element} Cabeçalho estilizado do perfil.
  */
-const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, profileId, isPreview = false, isPublicView = false }) => {
+const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, profileId, isPreview = false, isPublicView = false, onStartChat, isChatLoading = false }) => {
   /** Hook de navegação do React Navigation via referência global */
   const navigation = navigationRef;
   
@@ -164,6 +168,8 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, profileId, isPrevie
             user={user}
             onCall={handleCall}
             onWhatsApp={handleWhatsApp}
+            onStartChat={onStartChat}
+            isChatLoading={isChatLoading}
           />
         ) : (
           // Modo perfil próprio: exibe botão de edição
@@ -211,16 +217,35 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, profileId, isPrevie
 };
 
 /**
- * Informações de contato do prestador com ações de ligação e WhatsApp.
+ * Informações de contato do prestador com ações de ligação, WhatsApp e Chat.
  */
 interface ContactInfoProps {
   user: PrestadorResumo | null;
   onCall: (phone: string) => void;
   onWhatsApp: (phone: string) => void;
+  onStartChat?: () => void;
+  isChatLoading?: boolean;
 }
 
-const ContactInfo: React.FC<ContactInfoProps> = ({ user, onCall, onWhatsApp }) => (
+const ContactInfo: React.FC<ContactInfoProps> = ({ user, onCall, onWhatsApp, onStartChat, isChatLoading = false }) => (
   <View style={styles.contactInfo}>
+    {/* Botão Enviar Mensagem (Chat interno) */}
+    {onStartChat && (
+      <TouchableOpacity
+        onPress={onStartChat}
+        disabled={isChatLoading}
+        accessibilityRole="button"
+        accessibilityLabel={`Enviar mensagem para ${user?.nome ?? 'prestador'}`}
+        activeOpacity={0.7}
+        style={[styles.chatButton, isChatLoading && styles.chatButtonDisabled]}
+      >
+        <MaterialCommunityIcons name="chat" size={18} color="#FFFFFF" />
+        <Text style={styles.chatButtonText}>
+          {isChatLoading ? 'Abrindo...' : 'Enviar Mensagem'}
+        </Text>
+      </TouchableOpacity>
+    )}
+
     {/* Linha do Telefone com ações de contato */}
     <View style={styles.phoneRow}>
       {user?.telefone ? (
@@ -358,6 +383,26 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'flex-start',
     gap: 4,
+  },
+  chatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    gap: spacing.sm,
+    width: '100%',
+    marginBottom: spacing.sm,
+  },
+  chatButtonDisabled: {
+    opacity: 0.6,
+  },
+  chatButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   infoRow: {
     flexDirection: 'row',

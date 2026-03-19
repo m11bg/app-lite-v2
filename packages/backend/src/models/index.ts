@@ -3,3 +3,8 @@ export { default as User } from './User';
 export type { IUser } from './User';
 export { UserOfferInteraction } from './UserOfferInteraction';
 export type { IUserOfferInteraction } from './UserOfferInteraction';
+export { default as Conversation } from './Conversation';
+export type { IConversation } from './Conversation';
+export { default as Message } from './Message';
+export type { IMessage } from './Message';
+export type { MessageStatusType } from './Message';

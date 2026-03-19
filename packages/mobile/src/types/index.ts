@@ -5,6 +5,9 @@ export * from './user';
 // Export navigation types if present
 export * from './navigation';
 
+// Export chat types
+export * from './chat';
+
 // Common error type used across utilities and API handlers
 export interface AppError {
     message: string;

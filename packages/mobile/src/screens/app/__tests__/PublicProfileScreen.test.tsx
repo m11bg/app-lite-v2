@@ -40,6 +40,34 @@ jest.mock('@/services/profileService', () => ({
   getPublicProfile: jest.fn(),
 }));
 
+// Mock do ChatActionsContext para evitar erro de context fora do provider
+jest.mock('@/context/chat/ChatActionsContext', () => ({
+  useChatActions: () => ({
+    createConversation: jest.fn().mockResolvedValue('conv-1'),
+    sendMessage: jest.fn(),
+    markAsRead: jest.fn(),
+    openConversation: jest.fn(),
+    closeConversation: jest.fn(),
+    loadMoreMessages: jest.fn(),
+    refreshConversations: jest.fn(),
+  }),
+}));
+
+// Mock do AuthContext
+jest.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({
+    isAuthenticated: true,
+    user: { id: 'current-user' },
+  }),
+}));
+
+// Mock do useNavigation (sem requireActual para evitar conflito com StyleSheet.flatten)
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({
+    navigate: jest.fn(),
+  }),
+}));
+
 // Mock da navegação e parâmetros da rota
 const mockNavigation = {
   navigate: jest.fn(),
