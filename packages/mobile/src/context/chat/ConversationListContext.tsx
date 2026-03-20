@@ -1,7 +1,8 @@
 /**
  * ConversationListContext — Estado da lista de conversas.
- * Gerencia a lista de conversas do usuário com polling a cada 10 segundos.
+ * Gerencia a lista de conversas do usuário com polling a cada 30 segundos.
  * Somente componentes que consomem este context re-renderizam quando a lista muda.
+ * Implementa backoff automático ao receber erro 429 (Too Many Requests).
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
@@ -11,7 +12,10 @@ import { useAuth } from '@/context/AuthContext';
 import type { ConversationListState, ConversationSummary } from '@/types/chat';
 
 /** Intervalo de polling para atualização da lista de conversas. */
-const POLLING_INTERVAL = 10_000; // 10 segundos
+const POLLING_INTERVAL = 30_000; // 30 segundos
+
+/** Tempo de espera antes de retomar polling após erro 429 (rate limit). */
+const RATE_LIMIT_BACKOFF = 30_000; // 30 segundos
 
 const ConversationListContext = createContext<ConversationListState | undefined>(undefined);
 
@@ -32,11 +36,13 @@ export const ConversationListProvider: React.FC<ConversationListProviderProps> =
     error: null,
   });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const backoffTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(true);
 
   /**
    * Busca a lista de conversas na API e atualiza o estado.
    * Calcula o totalUnread somando os unreadCount de todas as conversas.
+   * Implementa backoff automático ao receber erro 429.
    */
   const fetchConversations = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -45,8 +51,31 @@ export const ConversationListProvider: React.FC<ConversationListProviderProps> =
       if (!isMountedRef.current) return;
       const totalUnread = data.reduce((sum, c) => sum + c.unreadCount, 0);
       setState({ conversations: data, totalUnread, isLoading: false, error: null });
-    } catch {
+    } catch (error: unknown) {
       if (!isMountedRef.current) return;
+
+      // Detecta erro 429 (Too Many Requests) e aplica backoff
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status === 429) {
+        // Para o polling imediatamente
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        // Agenda retomada do polling após período de backoff
+        if (backoffTimeoutRef.current) clearTimeout(backoffTimeoutRef.current);
+        backoffTimeoutRef.current = setTimeout(() => {
+          backoffTimeoutRef.current = null;
+          if (isMountedRef.current && isAuthenticated) {
+            void fetchConversations();
+            if (!intervalRef.current) {
+              intervalRef.current = setInterval(fetchConversations, POLLING_INTERVAL);
+            }
+          }
+        }, RATE_LIMIT_BACKOFF);
+        return; // Não atualiza estado de erro para 429 — é transitório
+      }
+
       setState((prev) => ({ ...prev, error: 'Erro ao carregar conversas', isLoading: false }));
     }
   }, [isAuthenticated]);
@@ -95,6 +124,10 @@ export const ConversationListProvider: React.FC<ConversationListProviderProps> =
     return () => {
       isMountedRef.current = false;
       stopPolling();
+      if (backoffTimeoutRef.current) {
+        clearTimeout(backoffTimeoutRef.current);
+        backoffTimeoutRef.current = null;
+      }
       subscription.remove();
     };
   }, [isAuthenticated, fetchConversations, startPolling, stopPolling]);

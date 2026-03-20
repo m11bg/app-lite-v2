@@ -22,22 +22,30 @@ import { isDbReady } from '../config/database';
 const router: ExpressRouter = Router();
 
 /**
- * Middleware de Rate Limiting.
- * Aplica uma restrição de taxa de requisições global para proteger a API
+ * Rotas de chat — registradas ANTES do generalLimiter.
+ * O chat possui rate limiters próprios (chatReadLimiter e sendMessageLimiter)
+ * que são mais adequados para a frequência de polling necessária.
+ * O generalLimiter (100 req/15min) é muito restritivo para o polling do chat.
+ */
+router.use('/v1/chat', chatRoutes);     // Rotas de chat (conversas e mensagens) na v1
+
+/**
+ * Middleware de Rate Limiting global.
+ * Aplica uma restrição de taxa de requisições para proteger a API
  * contra abusos e ataques de negação de serviço (DoS).
+ * Nota: rotas de chat são isentas (possuem rate limiting próprio acima).
  */
 const generalLimiterMw: RequestHandler = generalLimiter as unknown as RequestHandler;
 router.use(generalLimiterMw);
 
 /**
- * Registro de rotas modulares.
+ * Registro de rotas modulares (protegidas pelo generalLimiter).
  */
 router.use('/auth', authRoutes);         // Rotas de autenticação (Login, Registro, Senha)
 router.use('/v1/users', userRoutes);    // Rotas de perfil e gestão de usuários (v1)
 router.use('/upload', uploadRoutes);    // Rotas para upload de mídias e arquivos
 router.use('/ofertas', ofertaRoutes);   // Rotas para gestão e consulta de ofertas de serviço
 router.use('/v1', interactionRoutes);   // Rotas de interação (likes/dislikes) integradas na v1
-router.use('/v1/chat', chatRoutes);     // Rotas de chat (conversas e mensagens) na v1
 
 /**
  * Endpoint de Health Check.

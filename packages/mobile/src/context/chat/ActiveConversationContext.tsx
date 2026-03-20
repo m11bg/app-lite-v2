@@ -1,7 +1,8 @@
 /**
  * ActiveConversationContext — Estado da conversa aberta.
- * Gerencia as mensagens da conversa ativa com polling a cada 5 segundos.
+ * Gerencia as mensagens da conversa ativa com polling a cada 15 segundos.
  * Somente componentes que consomem este context re-renderizam quando as mensagens mudam.
+ * Implementa backoff automático ao receber erro 429 (Too Many Requests).
  */
 
 import React, {
@@ -18,7 +19,10 @@ import { chatService } from '@/services/chatService';
 import type { ActiveConversationState, Message } from '@/types/chat';
 
 /** Intervalo de polling para mensagens da conversa ativa. */
-const MESSAGE_POLLING_INTERVAL = 5_000; // 5 segundos
+const MESSAGE_POLLING_INTERVAL = 15_000; // 15 segundos
+
+/** Tempo de espera antes de retomar polling após erro 429 (rate limit). */
+const RATE_LIMIT_BACKOFF = 30_000; // 30 segundos
 
 /** Interface com setters exposta internamente ao ChatActionsContext. */
 export interface ActiveConversationControls {
@@ -49,14 +53,27 @@ export const ActiveConversationProvider: React.FC<ActiveConversationProviderProp
   });
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const backoffTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(true);
   const conversationIdRef = useRef<string | null>(null);
+
+  /** Reinicia o polling após backoff de rate limit. */
+  const restartPollingAfterBackoff = useCallback(() => {
+    const convId = conversationIdRef.current;
+    if (!convId || !isMountedRef.current) return;
+    if (intervalRef.current) return; // já está rodando
+
+    intervalRef.current = setInterval(() => {
+      void fetchMessagesInternal(convId, false);
+    }, MESSAGE_POLLING_INTERVAL);
+  }, []);
 
   /**
    * Busca mensagens da conversa ativa.
    * Em polling subsequente, busca apenas mensagens mais recentes.
+   * Implementa backoff automático ao receber erro 429.
    */
-  const fetchMessages = useCallback(async (convId: string, isInitial: boolean = false) => {
+  const fetchMessagesInternal = useCallback(async (convId: string, isInitial: boolean = false) => {
     try {
       const result = await chatService.getMessages(convId, 30);
       if (!isMountedRef.current || conversationIdRef.current !== convId) return;
@@ -87,19 +104,41 @@ export const ActiveConversationProvider: React.FC<ActiveConversationProviderProp
           error: null,
         };
       });
-    } catch {
+    } catch (error: unknown) {
       if (!isMountedRef.current) return;
+
+      // Detecta erro 429 (Too Many Requests) e aplica backoff
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status === 429) {
+        // Para o polling imediatamente
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        // Agenda retomada do polling após período de backoff
+        if (backoffTimeoutRef.current) clearTimeout(backoffTimeoutRef.current);
+        backoffTimeoutRef.current = setTimeout(() => {
+          backoffTimeoutRef.current = null;
+          restartPollingAfterBackoff();
+        }, RATE_LIMIT_BACKOFF);
+        return; // Não atualiza estado de erro para 429 — é transitório
+      }
+
       setState((prev) => ({ ...prev, error: 'Erro ao carregar mensagens', isLoading: false }));
     }
-  }, []);
+  }, [restartPollingAfterBackoff]);
 
   /** Define a conversa ativa e inicia o carregamento. */
   const setConversationId = useCallback(
     (id: string | null) => {
-      // Limpa polling anterior
+      // Limpa polling e backoff anteriores
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
+      }
+      if (backoffTimeoutRef.current) {
+        clearTimeout(backoffTimeoutRef.current);
+        backoffTimeoutRef.current = null;
       }
 
       conversationIdRef.current = id;
@@ -123,14 +162,14 @@ export const ActiveConversationProvider: React.FC<ActiveConversationProviderProp
         error: null,
       });
 
-      void fetchMessages(id, true);
+      void fetchMessagesInternal(id, true);
 
       // Inicia polling para novas mensagens
       intervalRef.current = setInterval(() => {
-        void fetchMessages(id, false);
+        void fetchMessagesInternal(id, false);
       }, MESSAGE_POLLING_INTERVAL);
     },
-    [fetchMessages],
+    [fetchMessagesInternal],
   );
 
   /** Adiciona uma mensagem otimista (optimistic UI) ao estado. */
@@ -175,8 +214,8 @@ export const ActiveConversationProvider: React.FC<ActiveConversationProviderProp
   const refresh = useCallback(async () => {
     const convId = conversationIdRef.current;
     if (!convId) return;
-    await fetchMessages(convId, true);
-  }, [fetchMessages]);
+    await fetchMessagesInternal(convId, true);
+  }, [fetchMessagesInternal]);
 
   // Pausa polling quando o app vai para background
   useEffect(() => {
@@ -187,10 +226,10 @@ export const ActiveConversationProvider: React.FC<ActiveConversationProviderProp
       if (!convId) return;
 
       if (nextState === 'active') {
-        void fetchMessages(convId, false);
+        void fetchMessagesInternal(convId, false);
         if (!intervalRef.current) {
           intervalRef.current = setInterval(() => {
-            void fetchMessages(convId, false);
+            void fetchMessagesInternal(convId, false);
           }, MESSAGE_POLLING_INTERVAL);
         }
       } else {
@@ -209,9 +248,13 @@ export const ActiveConversationProvider: React.FC<ActiveConversationProviderProp
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+      if (backoffTimeoutRef.current) {
+        clearTimeout(backoffTimeoutRef.current);
+        backoffTimeoutRef.current = null;
+      }
       subscription.remove();
     };
-  }, [fetchMessages]);
+  }, [fetchMessagesInternal]);
 
   const value: ActiveConversationControls = {
     state,

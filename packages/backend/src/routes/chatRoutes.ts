@@ -1,7 +1,7 @@
 /**
  * Rotas REST do Chat.
  * Define os 5 endpoints da Fase 1 do chat, todos protegidos por autenticação.
- * Inclui rate limiting específico para envio de mensagens.
+ * Inclui rate limiting específico para leitura (polling) e envio de mensagens.
  */
 
 import { Router } from 'express';
@@ -19,11 +19,32 @@ import rateLimit from 'express-rate-limit';
 
 const router: ExpressRouter = Router();
 
+const isTest = process.env.NODE_ENV === 'test';
+
+/**
+ * Rate limiter específico para leitura do chat (polling).
+ * Limite generoso para suportar polling de conversas e mensagens sem
+ * colidir com o generalLimiter global (que é mais restritivo).
+ * 60 requisições por minuto por IP — suficiente para polling a cada 15s
+ * de mensagens + 30s da lista de conversas para múltiplos usuários.
+ */
+const chatReadLimiter: RequestHandler = isTest
+  ? ((_req, _res, next) => { next(); }) as RequestHandler
+  : rateLimit({
+      windowMs: 60 * 1000, // 1 minuto
+      limit: 60,
+      message: {
+        success: false,
+        message: 'Muitas requisições ao chat. Aguarde um momento.',
+      },
+      standardHeaders: true,
+      legacyHeaders: false,
+    }) as unknown as RequestHandler;
+
 /**
  * Rate limiter específico para envio de mensagens.
  * Limita a 30 mensagens por minuto por IP para prevenir spam.
  */
-const isTest = process.env.NODE_ENV === 'test';
 const sendMessageLimiter: RequestHandler = isTest
   ? ((_req, _res, next) => { next(); }) as RequestHandler
   : rateLimit({
@@ -46,7 +67,7 @@ router.use(authMiddleware as RequestHandler);
  * GET /api/v1/chat/conversations
  * Lista todas as conversas do usuário autenticado, ordenadas por última atualização.
  */
-router.get('/conversations', chatController.getConversations as RequestHandler);
+router.get('/conversations', chatReadLimiter, chatController.getConversations as RequestHandler);
 
 /**
  * POST /api/v1/chat/conversations
@@ -66,6 +87,7 @@ router.post(
  */
 router.get(
   '/conversations/:id/messages',
+  chatReadLimiter,
   validate(getMessagesQuerySchema) as RequestHandler,
   chatController.getMessages as RequestHandler,
 );
