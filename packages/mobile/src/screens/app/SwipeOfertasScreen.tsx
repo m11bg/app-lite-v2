@@ -15,6 +15,8 @@ import SwipeLikeOverlay from '@/components/offers/SwipeLikeOverlay';
 import SwipeNopeOverlay from '@/components/offers/SwipeNopeOverlay';
 import SwipeSkipOverlay from '@/components/offers/SwipeSkipOverlay';
 import { useOfertaSwipe } from '@/hooks/useOfertaSwipe';
+import { useAuth } from '@/context/AuthContext';
+import { openAuthModal } from '@/navigation/RootNavigation';
 import { colors, spacing, radius, layout } from '@/styles/theme';
 import { OFFER_TRANSLATIONS } from '@/constants/translations';
 import { SwiperIndexProvider } from '@/context/SwiperIndexContext';
@@ -48,22 +50,41 @@ const SwipeOfertasScreen: React.FC = () => {
     const toggleMute = useCallback(() => setIsMuted((prev) => !prev), []);
 
     const navigation = useNavigation<NativeStackNavigationProp<OfertasStackParamList>>();
+    const { isAuthenticated, setPendingRedirect } = useAuth();
     const { width: windowWidth } = useWindowDimensions();
     const insets = useSafeAreaInsets();
     const fallbackWidth = Math.max(layout.cardWidthFallback, layout.minScreenWidth);
     const cardWidth = Math.max(windowWidth || fallbackWidth, layout.minScreenWidth) * layout.cardWidthRatio;
 
+    // Handler para navegar à criação de oferta, com guarda de autenticação
+    const onPressCriarOferta = useCallback(() => {
+        if (isAuthenticated) {
+            navigation.navigate('CreateOferta');
+        } else {
+            setPendingRedirect({ routeName: 'CreateOferta' });
+            openAuthModal({ screen: 'Login' });
+        }
+    }, [isAuthenticated, navigation, setPendingRedirect]);
+
     // Configura as opções de navegação do cabeçalho com referência estável para evitar re-render desnecessário
     const headerRight = useCallback(
         () => (
-            <IconButton
-                icon="format-list-bulleted"
-                onPress={() => navigation.navigate('BuscarOfertas')}
-                accessibilityLabel={OFFER_TRANSLATIONS.ACTIONS.SWITCH_TO_LIST}
-                accessibilityRole="button"
-            />
+            <View style={styles.headerRight}>
+                <IconButton
+                    icon="plus"
+                    onPress={onPressCriarOferta}
+                    accessibilityLabel="Criar oferta"
+                    accessibilityRole="button"
+                />
+                <IconButton
+                    icon="format-list-bulleted"
+                    onPress={() => navigation.navigate('BuscarOfertas')}
+                    accessibilityLabel={OFFER_TRANSLATIONS.ACTIONS.SWITCH_TO_LIST}
+                    accessibilityRole="button"
+                />
+            </View>
         ),
-        [navigation]
+        [navigation, onPressCriarOferta]
     );
 
     useEffect(() => {
@@ -365,6 +386,10 @@ const styles = StyleSheet.create({
     actionButton: {
         backgroundColor: colors.surface,
         elevation: 2,
+    },
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
 
     swiperArea: {
